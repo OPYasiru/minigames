@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Couple Mini Games ❤️</title>
-    <!-- Use a specific version of PeerJS that is known to be stable -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700&display=swap" rel="stylesheet">
@@ -169,34 +168,18 @@
     </div>
 
     <script>
-        // Force the use of Turn Servers for reliable cross-network connections
+        // Cleaned up connection parameters for max compatibility
         const GAME_PREFIX = "cpl_game_LK_";
         const shortId = Math.floor(10000 + Math.random() * 90000).toString();
         
         const peer = new Peer(GAME_PREFIX + shortId, {
-            debug: 3, // Enable detailed logging for troubleshooting
             config: {
                 'iceServers': [
                     { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun.cloudflare.com:3478' },
-                    // Adding multiple highly reliable public TURN servers
-                    {
-                        urls: "turn:openrelay.metered.ca:80",
-                        username: "openrelayproject",
-                        credential: "openrelayproject"
-                    },
-                    {
-                        urls: "turn:openrelay.metered.ca:443",
-                        username: "openrelayproject",
-                        credential: "openrelayproject"
-                    },
-                    {
-                        urls: "turn:openrelay.metered.ca:443?transport=tcp",
-                        username: "openrelayproject",
-                        credential: "openrelayproject"
-                    }
-                ],
-                'iceTransportPolicy': 'all' // Explicitly allow all paths
+                    { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" }
+                ]
             }
         });
         
@@ -217,7 +200,7 @@
         });
 
         peer.on('error', err => {
-            console.error("PeerJS detailed error:", err);
+            console.error("PeerJS Error:", err);
             let userMsg = '❌ Server Error: ' + err.type;
             if(err.type === 'peer-unavailable') {
                 userMsg = '❌ කෝඩ් එක වැරදියි හෝ පාට්නර් ගේම් එකේ නැහැ!';
@@ -227,7 +210,6 @@
             }
             document.getElementById('conn-status').innerText = userMsg;
             document.getElementById('conn-status').style.color = 'red';
-            showToast('Connection error occurred.');
         });
 
         // HOST receives connection
@@ -235,7 +217,6 @@
             conn = c;
             isHost = true;
             
-            // Critical for cross-network reliability
             conn.on('open', () => { 
                 showScreen('screen-lobby'); 
                 showToast('🥰 පාට්නර් එකතු වුණා!'); 
@@ -243,7 +224,7 @@
             });
             
             conn.on('error', (err) => {
-                 console.error("Connection error (Host side):", err);
+                 console.error("Connection error:", err);
                  showToast('Connection interrupted.');
             });
         });
@@ -259,8 +240,8 @@
             const btn = document.getElementById('join-btn');
             btn.innerText = 'Connecting...'; btn.disabled = true;
             
-            // Connect with reliable true for better data integrity over cellular
-            conn = peer.connect(GAME_PREFIX + enteredId, { reliable: true });
+            // Removed {reliable: true} as it forces SCTP over DTLS which often fails on mobile NATs
+            conn = peer.connect(GAME_PREFIX + enteredId);
             isHost = false;
             
             connectionTimeout = setTimeout(() => {
@@ -269,7 +250,7 @@
                     btn.innerText = 'Join Game'; 
                     btn.disabled = false; 
                 }
-            }, 20000); // Give it plenty of time to negotiate TURN
+            }, 15000);
             
             conn.on('open', () => {
                 clearTimeout(connectionTimeout); 
@@ -280,7 +261,6 @@
             });
             
             conn.on('error', err => { 
-                console.error("Connection error (Guest side):", err);
                 clearTimeout(connectionTimeout); 
                 showToast('Connection failed! Network issue.'); 
                 btn.innerText = 'Join Game'; 
@@ -299,7 +279,6 @@
                 else if(data.type === 'battle-click') processBattleClick(data.index);
                 else if(data.type === 'start-quiz') initQuiz(data.qIndex);
                 else if(data.type === 'quiz-ans') { partnerQuizAns = data.ans; checkQuizResults(); }
-                // Memory Game Handlers
                 else if(data.type === 'start-memory') { if(!isHost) initMemoryMatch(data.board); }
                 else if(data.type === 'memory-flip') processMemoryFlip(data.index);
             });
@@ -382,7 +361,6 @@
                         c1.classList.remove('flipped'); c1.innerText = '';
                         c2.classList.remove('flipped'); c2.innerText = '';
                         
-                        // Switch turn when missed
                         memoryTurn = memoryTurn === 'host' ? 'guest' : 'host';
                     }
                     flippedCards = [];
