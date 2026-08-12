@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Couple Mini Games ❤️</title>
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts: Noto Sans Sinhala for beautiful text -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #ff4d6d;
+            --bg: #ffe6ea;
+            --text: #590d22;
+        }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Noto Sans Sinhala', 'Segoe UI', Tahoma, sans-serif; 
+            background: linear-gradient(135deg, var(--bg), #ffccd5); 
+            margin: 0; padding: 10px; 
+            min-height: 100vh; 
+            display: flex; flex-direction: column; align-items: center; 
+            color: var(--text); overflow-x: hidden;
+        }
+        .card { 
+            background: rgba(255, 255, 255, 0.95); 
+            padding: 25px; border-radius: 25px; 
+            box-shadow: 0 10px 30px rgba(255, 77, 109, 0.15); 
+            width: 100%; max-width: 420px; 
+            text-align: center; margin-top: 20px; 
+        }
+        h1, h2, h3 { color: var(--primary); margin-bottom: 10px; font-weight: 700; }
+        p { font-size: 15px; color: #800f2f; margin-bottom: 15px; font-weight: 400; }
+        
+        button { 
+            background: var(--primary); color: white; 
+            border: none; padding: 12px 20px; 
+            border-radius: 30px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s; 
+            margin: 8px; width: 85%; font-family: 'Noto Sans Sinhala', sans-serif;
+            box-shadow: 0 4px 15px rgba(255, 77, 109, 0.3);
+        }
+        button:hover { background: #c9184a; transform: translateY(-2px); }
+        button.secondary { background: #ffb3c6; color: #590d22; box-shadow: none; }
+        
+        input { 
+            padding: 12px; border-radius: 15px; 
+            border: 2px solid #ffb3c6; text-align: center; 
+            font-size: 16px; width: 85%; margin-bottom: 15px; 
+            outline: none; background: #fff0f3;
+            font-family: 'Noto Sans Sinhala', sans-serif;
+        }
+        input:focus { border-color: var(--primary); }
+        
+        .id-box { 
+            background: white; border: 2px dashed var(--primary); 
+            padding: 10px; border-radius: 15px; 
+            font-size: 22px; font-weight: 700; color: var(--primary); 
+            letter-spacing: 2px; margin-bottom: 15px; font-family: monospace;
+        }
+        
+        .hidden { display: none !important; }
+        
+        /* Pictionary Styles */
+        #canvas-container { position: relative; width: 100%; background: white; border-radius: 15px; border: 2px solid #ffb3c6; overflow: hidden; }
+        canvas { width: 100%; height: 350px; touch-action: none; display: block; }
+        .colors { display: flex; justify-content: center; gap: 15px; margin: 15px 0; }
+        .color-btn { width: 35px; height: 35px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: 0.2s; }
+        .color-btn.active { border-color: var(--text); transform: scale(1.1); }
+        
+        /* Battleship Styles */
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
+        .cell { 
+            aspect-ratio: 1; background: #ffccd5; 
+            border-radius: 12px; display: flex; align-items: center; justify-content: center; 
+            font-size: 28px; cursor: pointer; transition: 0.2s; 
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.1); 
+        }
+        .cell:active { transform: translateY(4px); box-shadow: inset 0 0 0 rgba(0,0,0,0.1); }
+        .cell.heart-selected { background: var(--primary); animation: pop 0.3s; }
+        .cell.trap-selected { background: #590d22; animation: pop 0.3s; }
+        .cell.revealed-heart { background: var(--primary); animation: pop 0.5s; }
+        .cell.revealed-trap { background: #2b2d42; animation: shake 0.5s; }
+        .cell.revealed-empty { background: #f8edeb; opacity: 0.5; box-shadow: none; pointer-events: none;}
+        
+        /* Quiz Styles */
+        .quiz-btns { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .quiz-btns button { width: 45%; font-size: 18px; padding: 15px; }
+        #quiz-q-text { font-size: 24px; line-height: 1.4; color: #590d22; margin: 20px 0; padding: 10px;}
+        .result-box { background: #fff0f3; border-radius: 15px; padding: 20px; margin-top: 15px; border: 2px solid #ffb3c6; }
+        
+        @keyframes pop { 0% {transform: scale(0.8);} 50% {transform: scale(1.1);} 100% {transform: scale(1);} }
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+        
+        .stats { display: flex; justify-content: space-around; background: #fff0f3; padding: 10px; border-radius: 15px; margin-bottom: 15px; font-weight: bold; }
+        
+        /* Toast Notification */
+        #toast { 
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(89, 13, 34, 0.9); color: white; 
+            padding: 12px 25px; border-radius: 30px; 
+            z-index: 1000; transition: 0.4s; opacity: 0; pointer-events: none; 
+            font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            text-align: center; width: max-content; max-width: 90%;
+        }
+        #toast.show { opacity: 1; top: 40px; }
+    </style>
+</head>
+<body>
+
+    <div id="toast">Hello!</div>
+
+    <!-- Screen 1: Connect -->
+    <div id="screen-connect" class="card">
+        <h1>❤️ Couple Mini Games</h1>
+        <p>ආදරෙන් එකට සෙල්ලම් කරන්න</p>
+        
+        <div style="margin-top: 30px;">
+            <h3>ගේම් එක හදන්න (Host)</h3>
+            <p>ඔයාගේ කෝඩ් එක පාට්නර්ට යවන්න</p>
+            <div class="id-box" id="my-id">Wait...</div>
+            <button onclick="copyId()"><i class="fas fa-copy"></i> Copy Code</button>
+        </div>
+        
+        <hr style="border: 1px dashed #ffb3c6; margin: 25px 0;">
+        
+        <div>
+            <h3>ගේම් එකට Join වෙන්න</h3>
+            <p>පාට්නර් එවපු කෝඩ් එක මෙතන ගහන්න</p>
+            <input type="text" id="join-id" placeholder="Paste ID Here...">
+            <button onclick="joinGame()"><i class="fas fa-heart"></i> Join Game</button>
+        </div>
+    </div>
+
+    <!-- Screen 2: Lobby -->
+    <div id="screen-lobby" class="card hidden">
+        <h1>🎮 Game Lobby</h1>
+        <div id="lobby-content">
+            <p>පාට්නර් කනෙක්ට් වුණා! ගේම් එකක් තෝරන්න.</p>
+            <button onclick="startQuiz()">🤔 කවුද වැඩියෙන්ම? (Quiz)</button>
+            <button onclick="startPictionary()">🎨 චිත්‍ර අඳිමු (Pictionary)</button>
+            <button onclick="startBattleship()">❤️‍🔥 හදවත් යුද්ධය (Battleship)</button>
+        </div>
+    </div>
+
+    <!-- Screen 3: Pictionary -->
+    <div id="screen-pictionary" class="card hidden" style="max-width: 500px;">
+        <h2>🎨 චිත්‍ර අඳිමු</h2>
+        <p>දෙන්නටම එකම බෝඩ් එකේ අඳින්න පුළුවන්!</p>
+        
+        <div class="colors">
+            <div class="color-btn active" style="background: #ff4d6d;" onclick="setColor('#ff4d6d', this)"></div>
+            <div class="color-btn" style="background: #590d22;" onclick="setColor('#590d22', this)"></div>
+            <div class="color-btn" style="background: #0077b6;" onclick="setColor('#0077b6', this)"></div>
+            <div class="color-btn" style="background: #2b9348;" onclick="setColor('#2b9348', this)"></div>
+            <div class="color-btn" style="background: white; border: 2px solid #ccc;" onclick="setColor('white', this)"><i class="fas fa-eraser" style="line-height:30px;color:#333;"></i></div>
+        </div>
+        
+        <div id="canvas-container">
+            <canvas id="drawing-board"></canvas>
+        </div>
+        
+        <button class="secondary" onclick="clearCanvasSync()" style="margin-top: 15px;"><i class="fas fa-trash"></i> මකන්න</button>
+        <button class="secondary" onclick="goLobby()"><i class="fas fa-home"></i> Home</button>
+    </div>
+
+    <!-- Screen 4: Battleship Setup -->
+    <div id="screen-battleship-setup" class="card hidden">
+        <h2>❤️‍🔥 හදවත් යුද්ධය (හංගන්න)</h2>
+        <p>හදවත් 3කුයි, බෝම්බ (Traps) 3කුයි හංගන්න!</p>
+        
+        <div class="stats">
+            <div>❤️ ඉතුරු: <span id="setup-h">3</span></div>
+            <div>💣 ඉතුරු: <span id="setup-t">3</span></div>
+        </div>
+        
+        <div class="grid" id="setup-grid"></div>
+        <button id="btn-start-battle" onclick="sendBattleshipReady()" style="display:none;">සෙල්ලම පටන්ගන්න</button>
+    </div>
+
+    <!-- Screen 5: Battleship Play -->
+    <div id="screen-battleship-play" class="card hidden">
+        <h2>❤️‍🔥 හදවත් යුද්ධය</h2>
+        <p id="battle-instructions">හදවත් 3ක් හොයාගන්න! පරිස්සමින්!</p>
+        
+        <div class="stats">
+            <div>❤️ හම්බුනා: <span id="play-h">0/3</span></div>
+            <div>🛡️ චාන්ස්: <span id="play-c">7</span></div>
+        </div>
+        
+        <div class="grid" id="play-grid"></div>
+        <button class="secondary hidden" id="btn-battle-home" onclick="goLobby()">Back to Lobby</button>
+    </div>
+
+    <!-- Screen 6: Couple Quiz -->
+    <div id="screen-quiz" class="card hidden">
+        <h2>🤔 කවුද වැඩියෙන්ම?</h2>
+        
+        <div id="quiz-question-container">
+            <h3 id="quiz-q-text"></h3>
+            <div class="quiz-btns">
+                <button onclick="submitQuizAns('me')">🙋‍♂️ මම</button>
+                <button onclick="submitQuizAns('them')">👉 එයා</button>
+            </div>
+        </div>
+        
+        <div id="quiz-waiting" class="hidden">
+            <div class="result-box">
+                <h3>⏳ පොඩ්ඩක් ඉන්න...</h3>
+                <p>එයා උත්තර දෙනකන් බලාගෙන ඉන්නවා.</p>
+            </div>
+        </div>
+        
+        <div id="quiz-result" class="hidden result-box">
+            <h3 id="quiz-result-title"></h3>
+            <p id="quiz-result-detail" style="font-size: 16px; margin: 15px 0;"></p>
+            <button id="btn-next-quiz" onclick="nextQuizQ()" class="hidden">ඊළඟ ප්‍රශ්නය ➡️</button>
+        </div>
+        
+        <button class="secondary" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
+    </div>
+
+    <script>
+        // --- Core Setup & PeerJS ---
+        const peer = new Peer();
+        let conn;
+        let isHost = false;
+
+        const screens = [
+            'screen-connect', 'screen-lobby', 'screen-pictionary', 
+            'screen-battleship-setup', 'screen-battleship-play', 'screen-quiz'
+        ];
+        
+        function showScreen(id) {
+            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        peer.on('open', id => {
+            document.getElementById('my-id').innerText = id;
+        });
+
+        function copyId() {
+            navigator.clipboard.writeText(document.getElementById('my-id').innerText);
+            showToast('කෝඩ් එක Copy කරගත්තා!');
+        }
+
+        peer.on('connection', c => {
+            conn = c;
+            isHost = true;
+            setupConnection();
+            showScreen('screen-lobby');
+            showToast('🥰 පාට්නර් එකතු වුණා!');
+        });
+
+        function joinGame() {
+            const id = document.getElementById('join-id').value.trim();
+            if(!id) return showToast('කෝඩ් එක ගහන්න!');
+            showToast('කනෙක්ට් වෙනවා...');
+            conn = peer.connect(id);
+            isHost = false;
+            setupConnection();
+        }
+
+        function setupConnection() {
+            conn.on('open', () => {
+                if(!isHost) {
+                    showScreen('screen-lobby');
+                    document.getElementById('lobby-content').innerHTML = '<h3>🥰 පාට්නර් ගේම් එකක් තෝරනකන් ඉන්න...</h3>';
+                    showToast('සාර්ථකව එකතු වුණා!');
+                }
+            });
+
+            conn.on('data', data => {
+                if(data.type === 'go-lobby') showScreen('screen-lobby');
+                // Pictionary
+                else if(data.type === 'start-pic') initPictionary();
+                else if(data.type === 'draw') drawLine(data.x0, data.y0, data.x1, data.y1, data.color, false);
+                else if(data.type === 'clear-pic') ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // Battleship
+                else if(data.type === 'start-battle') { if(!isHost) initBattleshipGuest(); }
+                else if(data.type === 'battle-ready') { battleData = data.data; initBattleshipPlayGrid(); }
+                else if(data.type === 'battle-click') processBattleClick(data.index);
+                // Quiz
+                else if(data.type === 'start-quiz') initQuiz(data.qIndex);
+                else if(data.type === 'quiz-ans') {
+                    partnerQuizAns = data.ans;
+                    checkQuizResults();
+                }
+            });
+        }
+
+        function goLobby() {
+            showScreen('screen-lobby');
+            conn.send({type: 'go-lobby'});
+        }
+
+        // --- Game 1: Pictionary ---
+        const canvas = document.getElementById('drawing-board');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let currentX = 0, currentY = 0;
+        let myColor = '#ff4d6d';
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height || 350;
+        }
+
+        function startPictionary() { conn.send({type: 'start-pic'}); initPictionary(); }
+        function initPictionary() {
+            showScreen('screen-pictionary');
+            setTimeout(resizeCanvas, 100);
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        }
+        function setColor(color, btn) {
+            myColor = color;
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+        function drawLine(x0, y0, x1, y1, color, emit) {
+            ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+            ctx.strokeStyle = color; ctx.lineWidth = color === 'white' ? 15 : 4; ctx.stroke(); ctx.closePath();
+            if (emit) conn.send({ type: 'draw', x0, y0, x1, y1, color });
+        }
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top };
+        }
+        const onDown = (e) => { e.preventDefault(); isDrawing = true; const pos = getMousePos(e); currentX = pos.x; currentY = pos.y; };
+        const onMove = (e) => { e.preventDefault(); if (!isDrawing) return; const pos = getMousePos(e); drawLine(currentX, currentY, pos.x, pos.y, myColor, true); currentX = pos.x; currentY = pos.y; };
+        const onUp = (e) => { e.preventDefault(); isDrawing = false; };
+        canvas.addEventListener('mousedown', onDown); canvas.addEventListener('mousemove', onMove); canvas.addEventListener('mouseup', onUp); canvas.addEventListener('mouseout', onUp);
+        canvas.addEventListener('touchstart', onDown, {passive: false}); canvas.addEventListener('touchmove', onMove, {passive: false}); canvas.addEventListener('touchend', onUp);
+        function clearCanvasSync() { ctx.clearRect(0, 0, canvas.width, canvas.height); conn.send({type: 'clear-pic'}); }
+
+        // --- Game 2: Battleship ---
+        let battleState = { h: [], t: [] };
+        let battleData = { h: [], t: [] };
+        let playStats = { hearts: 0, tries: 7, done: false };
+        function startBattleship() { conn.send({type: 'start-battle'}); initBattleshipHost(); }
+        function initBattleshipHost() {
+            showScreen('screen-battleship-setup'); battleState = { h: [], t: [] }; updateSetupUI();
+            const grid = document.getElementById('setup-grid'); grid.innerHTML = '';
+            for(let i=0; i<25; i++) {
+                let cell = document.createElement('div'); cell.className = 'cell';
+                cell.onclick = () => setupCellClick(cell, i); grid.appendChild(cell);
+            }
+        }
+        function setupCellClick(cell, i) {
+            if(battleState.h.includes(i)) { battleState.h = battleState.h.filter(x => x !== i); cell.classList.remove('heart-selected'); cell.innerHTML = ''; }
+            else if(battleState.t.includes(i)) { battleState.t = battleState.t.filter(x => x !== i); cell.classList.remove('trap-selected'); cell.innerHTML = ''; }
+            else {
+                if(battleState.h.length < 3) { battleState.h.push(i); cell.classList.add('heart-selected'); cell.innerHTML = '❤️'; }
+                else if(battleState.t.length < 3) { battleState.t.push(i); cell.classList.add('trap-selected'); cell.innerHTML = '💣'; }
+            }
+            updateSetupUI();
+        }
+        function updateSetupUI() {
+            document.getElementById('setup-h').innerText = 3 - battleState.h.length;
+            document.getElementById('setup-t').innerText = 3 - battleState.t.length;
+            document.getElementById('btn-start-battle').style.display = (battleState.h.length === 3 && battleState.t.length === 3) ? 'block' : 'none';
+        }
+        function sendBattleshipReady() {
+            conn.send({type: 'battle-ready', data: battleState}); battleData = battleState;
+            showScreen('screen-battleship-play'); document.getElementById('battle-instructions').innerText = 'එයා හොයනකන් බලාගෙන ඉන්න...'; initBattleshipPlayGrid(true);
+        }
+        function initBattleshipGuest() { showScreen('screen-lobby'); document.getElementById('lobby-content').innerHTML = '<h3>හංගනකන් ඉන්න... 🤫</h3>'; }
+        function initBattleshipPlayGrid(isViewer = false) {
+            if(!isViewer) { showScreen('screen-battleship-play'); document.getElementById('battle-instructions').innerText = 'හදවත් 3ක් හොයාගන්න! බෝම්බත් තියෙනවා!'; }
+            document.getElementById('btn-battle-home').classList.add('hidden'); playStats = { hearts: 0, tries: 7, done: false }; updatePlayUI();
+            const grid = document.getElementById('play-grid'); grid.innerHTML = '';
+            for(let i=0; i<25; i++) {
+                let cell = document.createElement('div'); cell.className = 'cell'; cell.id = `bcell-${i}`;
+                if(!isViewer) { cell.onclick = () => { if(playStats.done) return; conn.send({type: 'battle-click', index: i}); processBattleClick(i); }; }
+                grid.appendChild(cell);
+            }
+        }
+        function processBattleClick(i) {
+            if(playStats.done) return; const cell = document.getElementById(`bcell-${i}`); if(cell.innerHTML !== '') return;
+            playStats.tries--;
+            if(battleData.h.includes(i)) { cell.classList.add('revealed-heart'); cell.innerHTML = '❤️'; playStats.hearts++; showToast('නියමයි! ❤️ එකක් හම්බුනා!'); }
+            else if(battleData.t.includes(i)) { cell.classList.add('revealed-trap'); cell.innerHTML = '💣'; showToast('අයියෝ! බෝම්බෙකට අහු වුණා!'); }
+            else { cell.classList.add('revealed-empty'); cell.innerHTML = '☁️'; }
+            updatePlayUI(); checkWinLoss();
+        }
+        function updatePlayUI() { document.getElementById('play-h').innerText = `${playStats.hearts}/3`; document.getElementById('play-c').innerText = playStats.tries; }
+        function checkWinLoss() {
+            if(playStats.hearts === 3) { playStats.done = true; document.getElementById('battle-instructions').innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; showToast('දෙන්නා දිනුම්! ❤️'); document.getElementById('btn-battle-home').classList.remove('hidden'); }
+            else if(playStats.tries === 0) {
+                playStats.done = true; document.getElementById('battle-instructions').innerText = '😢 චාන්ස් ඉවරයි! ඔයා පැරදුනා.'; showToast('ගේම් ඕවර්! 💔');
+                battleData.h.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c.innerHTML === '') c.innerHTML = '❤️'; });
+                document.getElementById('btn-battle-home').classList.remove('hidden');
+            }
+        }
+
+        // --- Game 3: Couple Quiz ---
+        const quizQuestions = [
+            "කවුද වැඩියෙන්ම කේන්ති ගන්නේ? 😡",
+            "කවුද වැඩියෙන්ම කන්න පෙරේත? 🍕",
+            "කවුද මුලින්ම 'ආදරෙයි' කිව්වේ? ❤️",
+            "කවුද මුලින්ම යාළු වෙන්න ඇහුවේ? 😍",
+            "කවුද වැඩියෙන්ම නිදාගන්නේ? 😴",
+            "කවුද වැඩියෙන්ම සල්ලි වියදම් කරන්නේ? 💸",
+            "කවුද වැඩියෙන්ම ෆෝන් එකේ ඉන්නේ? 📱",
+            "කවුද වැඩියෙන්ම සෙල්ෆි ගහන්නේ? 📸",
+            "ඩේට් එකකට යද්දි හැමතිස්සෙම පරක්කු වෙන්නේ කවුද? ⏰🐢",
+            "වලියක් ගියාම කවුද මුලින්ම sorry කියන්නේ? 🥺",
+            "කවුද බොරුවට තරහ අරන් යාළු කරනකන් බලන් ඉන්නේ? 😤",
+            "කවුද වැඩියෙන්ම රොමෑන්ටික්? 🥰",
+            "කවුද ලස්සනටම අඳින්නේ පලඳින්නේ? 👗",
+            "ෆිල්ම් එකක් බලද්දි වැඩියෙන්ම අඬන්නේ කවුද? 😭🎬",
+            "කෑම තෝරන්නේ කවුද? (මේක කන්න බෑ, ඒක කන්න බෑ ගාන්නේ) 😒🍽️",
+            "කවුද වැඩියෙන්ම සර්ප්‍රයිස් දෙන්න දක්ෂ? 🎁✨",
+            "අනාගතේ ගැන වැඩියෙන්ම ප්ලෑන් කරන්නේ කවුද? 🏡👨‍👩‍👧",
+            "කවුද දේවල් ඉක්මනටම අමතක කරන්නේ? 🧠❓",
+            "කවුද රහස් රකින්න වැඩියෙන්ම දක්ෂ? 🤫",
+            "නානකාමරේ වැඩියෙන්ම සිංදු කියන්නේ කවුද? 🚿🎶",
+            "කවුද වැඩියෙන්ම ට්‍රිප් යන්න ආස? 🚗🏕️"
+        ];
+        let currentQIndex = 0;
+        let myQuizAns = null;
+        let partnerQuizAns = null;
+
+        function startQuiz() {
+            // Only host can pick the question to ensure they both see the same one
+            if(!isHost) return showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!");
+            
+            currentQIndex = Math.floor(Math.random() * quizQuestions.length);
+            conn.send({type: 'start-quiz', qIndex: currentQIndex});
+            initQuiz(currentQIndex);
+        }
+
+        function initQuiz(qIndex) {
+            currentQIndex = qIndex;
+            myQuizAns = null;
+            partnerQuizAns = null;
+            
+            showScreen('screen-quiz');
+            document.getElementById('quiz-q-text').innerText = quizQuestions[qIndex];
+            
+            document.getElementById('quiz-question-container').classList.remove('hidden');
+            document.getElementById('quiz-waiting').classList.add('hidden');
+            document.getElementById('quiz-result').classList.add('hidden');
+            document.getElementById('btn-next-quiz').classList.add('hidden');
+        }
+
+        function submitQuizAns(ans) {
+            // Translate 'me' or 'them' into absolute 'host' or 'guest'
+            let absoluteAns;
+            if(isHost) {
+                absoluteAns = (ans === 'me') ? 'host' : 'guest';
+            } else {
+                absoluteAns = (ans === 'me') ? 'guest' : 'host';
+            }
+            
+            myQuizAns = absoluteAns;
+            conn.send({type: 'quiz-ans', ans: absoluteAns});
+            
+            document.getElementById('quiz-question-container').classList.add('hidden');
+            checkQuizResults();
+        }
+
+        function checkQuizResults() {
+            if(myQuizAns && partnerQuizAns) {
+                // Both have answered!
+                document.getElementById('quiz-waiting').classList.add('hidden');
+                document.getElementById('quiz-result').classList.remove('hidden');
+                
+                let resTitle = document.getElementById('quiz-result-title');
+                let resDetail = document.getElementById('quiz-result-detail');
+                
+                if(myQuizAns === partnerQuizAns) {
+                    resTitle.innerText = "🎉 දෙන්නම එකඟයි!";
+                    resTitle.style.color = "#2b9348";
+                    
+                    let who = "ඔයා";
+                    if(isHost && myQuizAns === 'guest') who = "එයා";
+                    if(!isHost && myQuizAns === 'host') who = "එයා";
+                    
+                    resDetail.innerText = `දෙන්නම පිළිගත්තා වැඩියෙන්ම ඒ දේ කරන්නේ '${who}' කියලා! 😂❤️`;
+                } else {
+                    resTitle.innerText = "⚔️ දෙන්නට දෙකක්!";
+                    resTitle.style.color = "#c1121f";
+                    resDetail.innerText = "මෙතන නම් ලොකු වලියක් යයි වගේ! 😅 දෙන්නම කියන්නේ තමන් නෙවෙයි, අනිත් කෙනා කියලා.";
+                }
+                
+                if(isHost) {
+                    document.getElementById('btn-next-quiz').classList.remove('hidden');
+                }
+            } else if (myQuizAns) {
+                // I have answered, waiting for partner
+                document.getElementById('quiz-waiting').classList.remove('hidden');
+            }
+        }
+        
+        function nextQuizQ() {
+            startQuiz(); // Picks a new question
+        }
+
+    </script>
+</body>
+</html>
