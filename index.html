@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Couple Mini Games ❤️</title>
+    <!-- Use a specific version of PeerJS that is known to be stable -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700&display=swap" rel="stylesheet">
@@ -168,18 +169,34 @@
     </div>
 
     <script>
-        // WITH FREE TURN SERVERS FOR MOBILE DATA
+        // Force the use of Turn Servers for reliable cross-network connections
         const GAME_PREFIX = "cpl_game_LK_";
         const shortId = Math.floor(10000 + Math.random() * 90000).toString();
         
         const peer = new Peer(GAME_PREFIX + shortId, {
+            debug: 3, // Enable detailed logging for troubleshooting
             config: {
                 'iceServers': [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun.cloudflare.com:3478' },
-                    { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
-                    { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" }
-                ]
+                    // Adding multiple highly reliable public TURN servers
+                    {
+                        urls: "turn:openrelay.metered.ca:80",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    },
+                    {
+                        urls: "turn:openrelay.metered.ca:443",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    },
+                    {
+                        urls: "turn:openrelay.metered.ca:443?transport=tcp",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    }
+                ],
+                'iceTransportPolicy': 'all' // Explicitly allow all paths
             }
         });
         
@@ -200,15 +217,35 @@
         });
 
         peer.on('error', err => {
-            document.getElementById('conn-status').innerText = '❌ Server Error: ' + err.type;
+            console.error("PeerJS detailed error:", err);
+            let userMsg = '❌ Server Error: ' + err.type;
+            if(err.type === 'peer-unavailable') {
+                userMsg = '❌ කෝඩ් එක වැරදියි හෝ පාට්නර් ගේම් එකේ නැහැ!';
+                clearTimeout(connectionTimeout);
+                document.getElementById('join-btn').innerText = 'Join Game';
+                document.getElementById('join-btn').disabled = false;
+            }
+            document.getElementById('conn-status').innerText = userMsg;
             document.getElementById('conn-status').style.color = 'red';
+            showToast('Connection error occurred.');
         });
 
         // HOST receives connection
         peer.on('connection', c => {
             conn = c;
             isHost = true;
-            conn.on('open', () => { showScreen('screen-lobby'); showToast('🥰 පාට්නර් එකතු වුණා!'); setupDataHandler(); });
+            
+            // Critical for cross-network reliability
+            conn.on('open', () => { 
+                showScreen('screen-lobby'); 
+                showToast('🥰 පාට්නර් එකතු වුණා!'); 
+                setupDataHandler(); 
+            });
+            
+            conn.on('error', (err) => {
+                 console.error("Connection error (Host side):", err);
+                 showToast('Connection interrupted.');
+            });
         });
 
         // GUEST joins
@@ -216,24 +253,39 @@
             const enteredId = document.getElementById('join-id').value.trim();
             if(!enteredId || enteredId.length !== 5) return showToast('කරුණාකර ඉලක්කම් 5ක කෝඩ් එකක් දෙන්න!');
             
+            if(enteredId === shortId) return showToast('ඔයාගේ කෝඩ් එකටම සම්බන්ධ වෙන්න බැහැ!');
+
             showToast('සම්බන්ධ වෙමින් පවතී... (Please wait)');
             const btn = document.getElementById('join-btn');
             btn.innerText = 'Connecting...'; btn.disabled = true;
             
-            conn = peer.connect(GAME_PREFIX + enteredId);
+            // Connect with reliable true for better data integrity over cellular
+            conn = peer.connect(GAME_PREFIX + enteredId, { reliable: true });
             isHost = false;
             
             connectionTimeout = setTimeout(() => {
-                if(!conn.open) { showToast('කනෙක්ට් වෙන්න බැරි වුණා! ආයෙත් ට්‍රයි කරන්න.'); btn.innerText = 'Join Game'; btn.disabled = false; }
-            }, 12000); 
+                if(!conn.open) { 
+                    showToast('කනෙක්ට් වෙන්න බැරි වුණා! ආයෙත් ට්‍රයි කරන්න.'); 
+                    btn.innerText = 'Join Game'; 
+                    btn.disabled = false; 
+                }
+            }, 20000); // Give it plenty of time to negotiate TURN
             
             conn.on('open', () => {
-                clearTimeout(connectionTimeout); showScreen('screen-lobby');
+                clearTimeout(connectionTimeout); 
+                showScreen('screen-lobby');
                 document.getElementById('lobby-content').innerHTML = '<h3>🥰 පාට්නර් ගේම් එකක් තෝරනකන් ඉන්න...</h3>';
-                showToast('සාර්ථකව එකතු වුණා!'); setupDataHandler();
+                showToast('සාර්ථකව එකතු වුණා!'); 
+                setupDataHandler();
             });
             
-            conn.on('error', err => { clearTimeout(connectionTimeout); showToast('Connection failed!'); btn.innerText = 'Join Game'; btn.disabled = false; });
+            conn.on('error', err => { 
+                console.error("Connection error (Guest side):", err);
+                clearTimeout(connectionTimeout); 
+                showToast('Connection failed! Network issue.'); 
+                btn.innerText = 'Join Game'; 
+                btn.disabled = false; 
+            });
         }
 
         function setupDataHandler() {
@@ -251,7 +303,10 @@
                 else if(data.type === 'start-memory') { if(!isHost) initMemoryMatch(data.board); }
                 else if(data.type === 'memory-flip') processMemoryFlip(data.index);
             });
-            conn.on('close', () => { alert("පාට්නර් ගේම් එකෙන් අයින් වුණා! කරුණාකර page එක Refresh කරන්න."); location.reload(); });
+            conn.on('close', () => { 
+                alert("පාට්නර් ගේම් එකෙන් අයින් වුණා! කරුණාකර page එක Refresh කරන්න."); 
+                location.reload(); 
+            });
         }
 
         function goLobby() { showScreen('screen-lobby'); conn.send({type: 'go-lobby'}); }
