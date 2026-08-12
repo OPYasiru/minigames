@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Couple Mini Games ❤️</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --primary: #ff4d6d; --bg: #ffe6ea; --text: #590d22; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Noto Sans Sinhala', sans-serif; background: linear-gradient(135deg, var(--bg), #ffccd5); margin: 0; padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; color: var(--text); overflow-x: hidden; }
+        .card { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(255, 77, 109, 0.15); width: 100%; max-width: 420px; text-align: center; margin-top: 20px; }
+        h1, h2, h3 { color: var(--primary); margin-bottom: 10px; }
+        p { font-size: 15px; color: #800f2f; margin-bottom: 15px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; margin: 8px; width: 85%; font-family: 'Noto Sans Sinhala', sans-serif; }
+        button:hover { background: #c9184a; transform: translateY(-2px); }
+        button:disabled { background: #ffb3c6; cursor: not-allowed; transform: none; }
+        button.secondary { background: #ffb3c6; color: #590d22; }
+        input { padding: 12px; border-radius: 15px; border: 2px solid #ffb3c6; text-align: center; font-size: 16px; width: 85%; margin-bottom: 15px; outline: none; background: #fff0f3; font-family: 'Noto Sans Sinhala', sans-serif; letter-spacing: 2px; font-weight: bold; }
+        input:focus { border-color: var(--primary); }
+        .id-box { background: white; border: 2px dashed var(--primary); padding: 10px; border-radius: 15px; font-size: 32px; font-weight: 700; color: var(--primary); letter-spacing: 5px; margin-bottom: 15px; font-family: monospace; }
+        .hidden { display: none !important; }
+        
+        /* Pictionary Styles */
+        #canvas-container { position: relative; width: 100%; background: white; border-radius: 15px; border: 2px solid #ffb3c6; overflow: hidden; }
+        canvas { width: 100%; height: 350px; touch-action: none; display: block; }
+        .colors { display: flex; justify-content: center; gap: 15px; margin: 15px 0; }
+        .color-btn { width: 35px; height: 35px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: 0.2s; }
+        .color-btn.active { border-color: var(--text); transform: scale(1.1); }
+        
+        /* Battleship Styles */
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
+        .cell { aspect-ratio: 1; background: #ffccd5; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; transition: 0.2s; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.1); }
+        .cell:active { transform: translateY(4px); box-shadow: inset 0 0 0 rgba(0,0,0,0.1); }
+        .cell.heart-selected { background: var(--primary); }
+        .cell.trap-selected { background: #590d22; }
+        .cell.revealed-heart { background: var(--primary); }
+        .cell.revealed-trap { background: #2b2d42; }
+        .cell.revealed-empty { background: #f8edeb; opacity: 0.5; pointer-events: none;}
+        
+        /* Memory Match Styles */
+        .memory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
+        .m-card { aspect-ratio: 1; background: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 35px; cursor: pointer; transition: 0.2s; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2); color: transparent; }
+        .m-card.flipped { background: white; border: 2px solid var(--primary); box-shadow: none; color: initial; pointer-events: none;}
+        .m-card.matched { background: #d4edda; border-color: #28a745; box-shadow: none; color: initial; pointer-events: none; opacity: 0.7;}
+        .turn-indicator { font-size: 16px; font-weight: bold; margin-bottom: 10px; padding: 10px; border-radius: 15px; transition: 0.3s; }
+        .my-turn { background: #d4edda; color: #155724; border: 2px solid #28a745; }
+        .their-turn { background: #f8d7da; color: #721c24; border: 2px dashed #dc3545; opacity: 0.8;}
+        
+        /* Quiz Styles */
+        .quiz-btns { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .quiz-btns button { width: 45%; font-size: 18px; padding: 15px; }
+        #quiz-q-text { font-size: 24px; line-height: 1.4; color: #590d22; margin: 20px 0; padding: 10px;}
+        .result-box { background: #fff0f3; border-radius: 15px; padding: 20px; margin-top: 15px; border: 2px solid #ffb3c6; }
+        .stats { display: flex; justify-content: space-around; background: #fff0f3; padding: 10px; border-radius: 15px; margin-bottom: 15px; font-weight: bold; }
+        
+        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(89, 13, 34, 0.9); color: white; padding: 12px 25px; border-radius: 30px; z-index: 1000; transition: 0.4s; opacity: 0; pointer-events: none; font-weight: bold; text-align: center; width: max-content; max-width: 90%; }
+        #toast.show { opacity: 1; top: 40px; }
+    </style>
+</head>
+<body>
+
+    <div id="toast">Hello!</div>
+
+    <!-- Connect Screen -->
+    <div id="screen-connect" class="card">
+        <h1>❤️ Couple Mini Games</h1>
+        <p id="conn-status" style="color: #ff9f1c; font-size: 12px;">Firebase Server Connecting...</p>
+        
+        <div style="margin-top: 30px;">
+            <h3>ගේම් එක හදන්න (Host)</h3>
+            <p>ඔයාගේ කෝඩ් එක පාට්නර්ට යවන්න</p>
+            <div class="id-box" id="my-id">...</div>
+        </div>
+        
+        <hr style="border: 1px dashed #ffb3c6; margin: 25px 0;">
+        
+        <div>
+            <h3>ගේම් එකට Join වෙන්න</h3>
+            <p>පාට්නර් එවපු කෝඩ් එක මෙතන ගහන්න</p>
+            <input type="number" id="join-id" placeholder="කෝඩ් එක (උදා: 12345)" maxlength="5">
+            <button id="join-btn" onclick="joinGame()"><i class="fas fa-heart"></i> Join Game</button>
+        </div>
+    </div>
+
+    <!-- Lobby Screen -->
+    <div id="screen-lobby" class="card hidden">
+        <h1>🎮 Game Lobby</h1>
+        <div id="lobby-content">
+            <p>පාට්නර් කනෙක්ට් වුණා! ගේම් එකක් තෝරන්න.</p>
+            <button onclick="startMemoryMatch()">🃏 මතක ගැලපීම (Memory Match)</button>
+            <button onclick="startQuiz()">🤔 කවුද වැඩියෙන්ම? (Quiz)</button>
+            <button onclick="startBattleship()">❤️‍🔥 හදවත් යුද්ධය (Battleship)</button>
+            <button onclick="startPictionary()">🎨 චිත්‍ර අඳිමු (Pictionary)</button>
+        </div>
+    </div>
+
+    <!-- Memory Match -->
+    <div id="screen-memory" class="card hidden">
+        <h2>🃏 මතක ගැලපීම</h2>
+        <div id="mem-turn-indicator" class="turn-indicator"></div>
+        <div class="stats" style="font-size: 14px;">
+            <div>🧑‍💻 Host: <span id="mem-score-host">0</span></div>
+            <div>📱 Guest: <span id="mem-score-guest">0</span></div>
+        </div>
+        <div class="memory-grid" id="memory-grid"></div>
+        <button class="secondary hidden" id="btn-mem-home" onclick="goLobby()">Back to Lobby</button>
+    </div>
+
+    <!-- Pictionary -->
+    <div id="screen-pictionary" class="card hidden" style="max-width: 500px;">
+        <h2>🎨 චිත්‍ර අඳිමු</h2>
+        <div class="colors">
+            <div class="color-btn active" style="background: #ff4d6d;" onclick="setColor('#ff4d6d', this)"></div>
+            <div class="color-btn" style="background: #590d22;" onclick="setColor('#590d22', this)"></div>
+            <div class="color-btn" style="background: #0077b6;" onclick="setColor('#0077b6', this)"></div>
+            <div class="color-btn" style="background: #2b9348;" onclick="setColor('#2b9348', this)"></div>
+            <div class="color-btn" style="background: white; border: 2px solid #ccc;" onclick="setColor('white', this)"><i class="fas fa-eraser" style="line-height:30px;color:#333;"></i></div>
+        </div>
+        <div id="canvas-container"><canvas id="drawing-board"></canvas></div>
+        <button class="secondary" onclick="clearCanvasSync()" style="margin-top: 15px;"><i class="fas fa-trash"></i> මකන්න</button>
+        <button class="secondary" onclick="goLobby()"><i class="fas fa-home"></i> Home</button>
+    </div>
+
+    <!-- Battleship Setup -->
+    <div id="screen-battleship-setup" class="card hidden">
+        <h2>❤️‍🔥 හදවත් යුද්ධය (හංගන්න)</h2>
+        <div class="stats">
+            <div>❤️ ඉතුරු: <span id="setup-h">3</span></div>
+            <div>💣 ඉතුරු: <span id="setup-t">3</span></div>
+        </div>
+        <div class="grid" id="setup-grid"></div>
+        <button id="btn-start-battle" onclick="sendBattleshipReady()" style="display:none;">සෙල්ලම පටන්ගන්න</button>
+    </div>
+
+    <!-- Battleship Play -->
+    <div id="screen-battleship-play" class="card hidden">
+        <h2>❤️‍🔥 හදවත් යුද්ධය</h2>
+        <p id="battle-instructions">හදවත් 3ක් හොයාගන්න! පරිස්සමින්!</p>
+        <div class="stats">
+            <div>❤️ හම්බුනා: <span id="play-h">0/3</span></div>
+            <div>🛡️ චාන්ස්: <span id="play-c">7</span></div>
+        </div>
+        <div class="grid" id="play-grid"></div>
+        <button class="secondary hidden" id="btn-battle-home" onclick="goLobby()">Back to Lobby</button>
+    </div>
+
+    <!-- Quiz -->
+    <div id="screen-quiz" class="card hidden">
+        <h2>🤔 කවුද වැඩියෙන්ම?</h2>
+        <div id="quiz-question-container">
+            <h3 id="quiz-q-text"></h3>
+            <div class="quiz-btns">
+                <button onclick="submitQuizAns('me')">🙋‍♂️ මම</button>
+                <button onclick="submitQuizAns('them')">👉 එයා</button>
+            </div>
+        </div>
+        <div id="quiz-waiting" class="hidden"><div class="result-box"><h3>⏳ පොඩ්ඩක් ඉන්න...</h3></div></div>
+        <div id="quiz-result" class="hidden result-box">
+            <h3 id="quiz-result-title"></h3>
+            <p id="quiz-result-detail" style="font-size: 16px; margin: 15px 0;"></p>
+            <button id="btn-next-quiz" onclick="nextQuizQ()" class="hidden">ඊළඟ ප්‍රශ්නය ➡️</button>
+        </div>
+        <button class="secondary" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
+    </div>
+
+    <script>
+        // 🛑 ඔයාගේ FIREBASE CONFIG එක 🛑
+        const firebaseConfig = {
+            apiKey: "AIzaSyDpK3gJkai7LtAT35h5XjX1CysTIkDh1X4",
+            authDomain: "minigames-4d677.firebaseapp.com",
+            databaseURL: "https://minigames-4d677-default-rtdb.firebaseio.com",
+            projectId: "minigames-4d677",
+            storageBucket: "minigames-4d677.firebasestorage.app",
+            messagingSenderId: "632455789288",
+            appId: "1:632455789288:web:6f223e611ef575c65ca75d",
+            measurementId: "G-6RFBRJ09B3"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let gameId = Math.floor(10000 + Math.random() * 90000).toString();
+        let isHost = true;
+
+        const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-setup', 'screen-battleship-play', 'screen-quiz', 'screen-memory'];
+        function showScreen(id) { screens.forEach(s => document.getElementById(s).classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
+        function showToast(msg) { 
+            const t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show'); 
+            setTimeout(() => t.classList.remove('show'), 3500); 
+        }
+
+        // Host initialization
+        document.getElementById('my-id').innerText = gameId;
+        document.getElementById('conn-status').innerText = '✔️ Server Ready (Firebase)';
+        document.getElementById('conn-status').style.color = 'green';
+        
+        // Host creates the room
+        db.ref(`games/${gameId}/status`).set('waiting');
+        db.ref(`games/${gameId}`).onDisconnect().remove(); // Clean up if host leaves
+
+        // Host listens for guest
+        db.ref(`games/${gameId}/status`).on('value', snap => {
+            if(isHost && snap.val() === 'connected') {
+                showScreen('screen-lobby');
+                showToast('🥰 පාට්නර් එකතු වුණා!');
+                setupDataHandler();
+            }
+        });
+
+        // Guest joins
+        function joinGame() {
+            const enteredId = document.getElementById('join-id').value.trim();
+            if(!enteredId || enteredId.length !== 5) return showToast('කරුණාකර ඉලක්කම් 5ක කෝඩ් එකක් දෙන්න!');
+            if(enteredId === gameId) return showToast('ඔයාගේ කෝඩ් එකටම සම්බන්ධ වෙන්න බැහැ!');
+
+            showToast('සම්බන්ධ වෙමින් පවතී... (Please wait)');
+            const btn = document.getElementById('join-btn');
+            btn.innerText = 'Connecting...'; btn.disabled = true;
+
+            db.ref(`games/${enteredId}/status`).once('value', snap => {
+                if (snap.exists() && snap.val() === 'waiting') {
+                    // Success!
+                    isHost = false;
+                    gameId = enteredId;
+                    
+                    db.ref(`games/${gameId}/status`).set('connected');
+                    db.ref(`games/${gameId}/status`).onDisconnect().set('disconnected');
+                    
+                    showScreen('screen-lobby');
+                    document.getElementById('lobby-content').innerHTML = '<h3>🥰 පාට්නර් ගේම් එකක් තෝරනකන් ඉන්න...</h3>';
+                    showToast('සාර්ථකව එකතු වුණා!');
+                    setupDataHandler();
+                } else {
+                    showToast('කෝඩ් එක වැරදියි හෝ පාට්නර් ගේම් එකේ නැහැ!');
+                    btn.innerText = 'Join Game'; btn.disabled = false;
+                }
+            });
+        }
+
+        // Firebase Sync Wrapper (Replaces PeerJS conn.send)
+        function sendData(data) {
+            db.ref(`games/${gameId}/messages`).push({
+                data: data,
+                sender: isHost ? 'host' : 'guest'
+            });
+        }
+
+        function setupDataHandler() {
+            // Listen for incoming messages
+            db.ref(`games/${gameId}/messages`).on('child_added', snap => {
+                const msg = snap.val();
+                if (!msg) return;
+                // Ignore our own messages
+                if (msg.sender === (isHost ? 'host' : 'guest')) return;
+
+                const data = msg.data;
+                // --- Game Logic Handling ---
+                if(data.type === 'go-lobby') showScreen('screen-lobby');
+                else if(data.type === 'start-pic') initPictionary();
+                else if(data.type === 'draw') drawLine(data.x0, data.y0, data.x1, data.y1, data.color, false);
+                else if(data.type === 'clear-pic') ctx.clearRect(0, 0, canvas.width, canvas.height);
+                else if(data.type === 'start-battle') { if(!isHost) initBattleshipGuest(); }
+                else if(data.type === 'battle-ready') { battleData = data.data; initBattleshipPlayGrid(); }
+                else if(data.type === 'battle-click') processBattleClick(data.index);
+                else if(data.type === 'start-quiz') initQuiz(data.qIndex);
+                else if(data.type === 'quiz-ans') { partnerQuizAns = data.ans; checkQuizResults(); }
+                else if(data.type === 'start-memory') { if(!isHost) initMemoryMatch(data.board); }
+                else if(data.type === 'memory-flip') processMemoryFlip(data.index);
+            });
+
+            // Listen for disconnects
+            db.ref(`games/${gameId}/status`).on('value', snap => {
+                if(!snap.exists() || snap.val() === 'disconnected') {
+                    alert("පාට්නර් ගේම් එකෙන් අයින් වුණා! කරුණාකර page එක Refresh කරන්න.");
+                    location.reload();
+                }
+            });
+        }
+
+        function goLobby() { showScreen('screen-lobby'); sendData({type: 'go-lobby'}); }
+
+        // --- 1. Memory Match Game ---
+        const memoryEmojis = ['🐶', '🍕', '🚀', '🌻', '🎈', '🧸', '💎', '🍓'];
+        let memoryBoard = [];
+        let flippedCards = [];
+        let matchedCards = [];
+        let memoryTurn = 'host'; 
+        let scoreHost = 0, scoreGuest = 0;
+        let lockBoard = false;
+
+        function startMemoryMatch() {
+            if(!isHost) return showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
+            memoryBoard = [...memoryEmojis, ...memoryEmojis].sort(() => Math.random() - 0.5);
+            sendData({type: 'start-memory', board: memoryBoard});
+            initMemoryMatch(memoryBoard);
+        }
+
+        function initMemoryMatch(board) {
+            memoryBoard = board;
+            flippedCards = []; matchedCards = [];
+            scoreHost = 0; scoreGuest = 0;
+            memoryTurn = 'host';
+            lockBoard = false;
+            showScreen('screen-memory');
+            
+            const grid = document.getElementById('memory-grid');
+            grid.innerHTML = '';
+            for(let i=0; i<16; i++) {
+                let card = document.createElement('div');
+                card.className = 'm-card';
+                card.id = `mem-card-${i}`;
+                card.onclick = () => handleMemoryClick(i);
+                grid.appendChild(card);
+            }
+            updateMemoryUI();
+        }
+
+        function handleMemoryClick(i) {
+            if(lockBoard) return;
+            if(flippedCards.includes(i) || matchedCards.includes(i)) return;
+            
+            let amI = isHost ? 'host' : 'guest';
+            if(memoryTurn !== amI) return showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
+            
+            sendData({type: 'memory-flip', index: i});
+            processMemoryFlip(i);
+        }
+
+        function processMemoryFlip(i) {
+            flippedCards.push(i);
+            let card = document.getElementById(`mem-card-${i}`);
+            card.classList.add('flipped');
+            card.innerText = memoryBoard[i];
+            
+            if(flippedCards.length === 2) {
+                lockBoard = true;
+                let [idx1, idx2] = flippedCards;
+                let isMatch = memoryBoard[idx1] === memoryBoard[idx2];
+                
+                setTimeout(() => {
+                    if(isMatch) {
+                        matchedCards.push(idx1, idx2);
+                        document.getElementById(`mem-card-${idx1}`).classList.add('matched');
+                        document.getElementById(`mem-card-${idx2}`).classList.add('matched');
+                        if(memoryTurn === 'host') scoreHost++; else scoreGuest++;
+                        showToast("නියමයි! ගැලපෙනවා! 🎯");
+                    } else {
+                        let c1 = document.getElementById(`mem-card-${idx1}`);
+                        let c2 = document.getElementById(`mem-card-${idx2}`);
+                        c1.classList.remove('flipped'); c1.innerText = '';
+                        c2.classList.remove('flipped'); c2.innerText = '';
+                        
+                        memoryTurn = memoryTurn === 'host' ? 'guest' : 'host';
+                    }
+                    flippedCards = [];
+                    updateMemoryUI();
+                    lockBoard = false;
+                    
+                    if(matchedCards.length === 16) {
+                        let winner = scoreHost === scoreGuest ? 'දෙන්නම දිනුම් (Draw)!' : (scoreHost > scoreGuest ? 'Host දිනුම්!' : 'Guest දිනුම්!');
+                        document.getElementById('mem-turn-indicator').innerText = "🎉 ගේම් ඉවරයි! " + winner;
+                        document.getElementById('mem-turn-indicator').className = "turn-indicator my-turn";
+                        document.getElementById('btn-mem-home').classList.remove('hidden');
+                    }
+                }, 1200);
+            }
+        }
+
+        function updateMemoryUI() {
+            document.getElementById('mem-score-host').innerText = scoreHost;
+            document.getElementById('mem-score-guest').innerText = scoreGuest;
+            
+            let amI = isHost ? 'host' : 'guest';
+            let ind = document.getElementById('mem-turn-indicator');
+            document.getElementById('btn-mem-home').classList.add('hidden');
+            
+            if(matchedCards.length < 16) {
+                if(memoryTurn === amI) {
+                    ind.innerText = "👉 දැන් ඔයාගේ වාරේ (ඔබන්න)";
+                    ind.className = "turn-indicator my-turn";
+                } else {
+                    ind.innerText = "⏳ දැන් එයාගේ වාරේ...";
+                    ind.className = "turn-indicator their-turn";
+                }
+            }
+        }
+
+        // --- 2. Pictionary ---
+        const canvas = document.getElementById('drawing-board'); const ctx = canvas.getContext('2d');
+        let isDrawing = false, currentX = 0, currentY = 0, myColor = '#ff4d6d';
+        function resizeCanvas() { const rect = canvas.parentElement.getBoundingClientRect(); canvas.width = rect.width; canvas.height = rect.height || 350; }
+        function startPictionary() { sendData({type: 'start-pic'}); initPictionary(); }
+        function initPictionary() { showScreen('screen-pictionary'); setTimeout(resizeCanvas, 100); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; }
+        function setColor(color, btn) { myColor = color; document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+        function drawLine(x0, y0, x1, y1, color, emit) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.strokeStyle = color; ctx.lineWidth = color === 'white' ? 15 : 4; ctx.stroke(); ctx.closePath(); if (emit) sendData({ type: 'draw', x0, y0, x1, y1, color }); }
+        function getMousePos(e) { const rect = canvas.getBoundingClientRect(); return { x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top }; }
+        const onDown = (e) => { e.preventDefault(); isDrawing = true; const pos = getMousePos(e); currentX = pos.x; currentY = pos.y; };
+        const onMove = (e) => { e.preventDefault(); if (!isDrawing) return; const pos = getMousePos(e); drawLine(currentX, currentY, pos.x, pos.y, myColor, true); currentX = pos.x; currentY = pos.y; };
+        const onUp = (e) => { e.preventDefault(); isDrawing = false; };
+        canvas.addEventListener('mousedown', onDown); canvas.addEventListener('mousemove', onMove); canvas.addEventListener('mouseup', onUp); canvas.addEventListener('mouseout', onUp);
+        canvas.addEventListener('touchstart', onDown, {passive: false}); canvas.addEventListener('touchmove', onMove, {passive: false}); canvas.addEventListener('touchend', onUp);
+        function clearCanvasSync() { ctx.clearRect(0, 0, canvas.width, canvas.height); sendData({type: 'clear-pic'}); }
+
+        // --- 3. Battleship ---
+        let battleState = { h: [], t: [] }, battleData = { h: [], t: [] }, playStats = { hearts: 0, tries: 7, done: false };
+        function startBattleship() { sendData({type: 'start-battle'}); initBattleshipHost(); }
+        function initBattleshipHost() { showScreen('screen-battleship-setup'); battleState = { h: [], t: [] }; updateSetupUI(); const grid = document.getElementById('setup-grid'); grid.innerHTML = ''; for(let i=0; i<25; i++) { let cell = document.createElement('div'); cell.className = 'cell'; cell.onclick = () => setupCellClick(cell, i); grid.appendChild(cell); } }
+        function setupCellClick(cell, i) { if(battleState.h.includes(i)) { battleState.h = battleState.h.filter(x => x !== i); cell.classList.remove('heart-selected'); cell.innerHTML = ''; } else if(battleState.t.includes(i)) { battleState.t = battleState.t.filter(x => x !== i); cell.classList.remove('trap-selected'); cell.innerHTML = ''; } else { if(battleState.h.length < 3) { battleState.h.push(i); cell.classList.add('heart-selected'); cell.innerHTML = '❤️'; } else if(battleState.t.length < 3) { battleState.t.push(i); cell.classList.add('trap-selected'); cell.innerHTML = '💣'; } } updateSetupUI(); }
+        function updateSetupUI() { document.getElementById('setup-h').innerText = 3 - battleState.h.length; document.getElementById('setup-t').innerText = 3 - battleState.t.length; document.getElementById('btn-start-battle').style.display = (battleState.h.length === 3 && battleState.t.length === 3) ? 'block' : 'none'; }
+        function sendBattleshipReady() { sendData({type: 'battle-ready', data: battleState}); battleData = battleState; showScreen('screen-battleship-play'); document.getElementById('battle-instructions').innerText = 'එයා හොයනකන් බලාගෙන ඉන්න...'; initBattleshipPlayGrid(true); }
+        function initBattleshipGuest() { showScreen('screen-lobby'); document.getElementById('lobby-content').innerHTML = '<h3>හංගනකන් ඉන්න... 🤫</h3>'; }
+        function initBattleshipPlayGrid(isViewer = false) { if(!isViewer) { showScreen('screen-battleship-play'); document.getElementById('battle-instructions').innerText = 'හදවත් 3ක් හොයාගන්න! බෝම්බත් තියෙනවා!'; } document.getElementById('btn-battle-home').classList.add('hidden'); playStats = { hearts: 0, tries: 7, done: false }; updatePlayUI(); const grid = document.getElementById('play-grid'); grid.innerHTML = ''; for(let i=0; i<25; i++) { let cell = document.createElement('div'); cell.className = 'cell'; cell.id = `bcell-${i}`; if(!isViewer) { cell.onclick = () => { if(playStats.done) return; sendData({type: 'battle-click', index: i}); processBattleClick(i); }; } grid.appendChild(cell); } }
+        function processBattleClick(i) { if(playStats.done) return; const cell = document.getElementById(`bcell-${i}`); if(cell.innerHTML !== '') return; playStats.tries--; if(battleData.h.includes(i)) { cell.classList.add('revealed-heart'); cell.innerHTML = '❤️'; playStats.hearts++; showToast('නියමයි! ❤️ එකක් හම්බුනා!'); } else if(battleData.t.includes(i)) { cell.classList.add('revealed-trap'); cell.innerHTML = '💣'; showToast('අයියෝ! බෝම්බෙකට අහු වුණා!'); } else { cell.classList.add('revealed-empty'); cell.innerHTML = '☁️'; } updatePlayUI(); checkWinLoss(); }
+        function updatePlayUI() { document.getElementById('play-h').innerText = `${playStats.hearts}/3`; document.getElementById('play-c').innerText = playStats.tries; }
+        function checkWinLoss() { if(playStats.hearts === 3) { playStats.done = true; document.getElementById('battle-instructions').innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; showToast('දෙන්නා දිනුම්! ❤️'); document.getElementById('btn-battle-home').classList.remove('hidden'); } else if(playStats.tries === 0) { playStats.done = true; document.getElementById('battle-instructions').innerText = '😢 චාන්ස් ඉවරයි! ඔයා පැරදුනා.'; showToast('ගේම් ඕවර්! 💔'); battleData.h.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c.innerHTML === '') c.innerHTML = '❤️'; }); document.getElementById('btn-battle-home').classList.remove('hidden'); } }
+
+        // --- 4. Quiz ---
+        const quizQuestions = [
+            "කවුද වැඩියෙන්ම කේන්ති ගන්නේ? 😡", "කවුද වැඩියෙන්ම කන්න පෙරේත? 🍕", "කවුද මුලින්ම 'ආදරෙයි' කිව්වේ? ❤️",
+            "කවුද මුලින්ම යාළු වෙන්න ඇහුවේ? 😍", "කවුද වැඩියෙන්ම නිදාගන්නේ? 😴", "කවුද වැඩියෙන්ම සල්ලි වියදම් කරන්නේ? 💸",
+            "කවුද වැඩියෙන්ම ෆෝන් එකේ ඉන්නේ? 📱", "කවුද වැඩියෙන්ම සෙල්ෆි ගහන්නේ? 📸", "ඩේට් එකකට යද්දි හැමතිස්සෙම පරක්කු වෙන්නේ කවුද? ⏰",
+            "වලියක් ගියාම කවුද මුලින්ම sorry කියන්නේ? 🥺", "කවුද බොරුවට තරහ අරන් බලන් ඉන්නේ? 😤", "කවුද වැඩියෙන්ම රොමෑන්ටික්? 🥰",
+            "කවුද ලස්සනටම අඳින්නේ පලඳින්නේ? 👗", "ෆිල්ම් එකක් බලද්දි වැඩියෙන්ම අඬන්නේ කවුද? 😭", "කෑම තෝරන්නේ කවුද? 😒",
+            "කවුද වැඩියෙන්ම සර්ප්‍රයිස් දෙන්න දක්ෂ? 🎁", "අනාගතේ ගැන වැඩියෙන්ම ප්ලෑන් කරන්නේ කවුද? 🏡", "කවුද දේවල් ඉක්මනටම අමතක කරන්නේ? 🧠",
+            "කවුද රහස් රකින්න වැඩියෙන්ම දක්ෂ? 🤫", "නානකාමරේ වැඩියෙන්ම සිංදු කියන්නේ කවුද? 🚿", "කවුද වැඩියෙන්ම ට්‍රිප් යන්න ආස? 🚗"
+        ];
+        let currentQIndex = 0, myQuizAns = null, partnerQuizAns = null;
+        function startQuiz() { if(!isHost) return showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); currentQIndex = Math.floor(Math.random() * quizQuestions.length); sendData({type: 'start-quiz', qIndex: currentQIndex}); initQuiz(currentQIndex); }
+        function initQuiz(qIndex) { currentQIndex = qIndex; myQuizAns = null; partnerQuizAns = null; showScreen('screen-quiz'); document.getElementById('quiz-q-text').innerText = quizQuestions[qIndex]; document.getElementById('quiz-question-container').classList.remove('hidden'); document.getElementById('quiz-waiting').classList.add('hidden'); document.getElementById('quiz-result').classList.add('hidden'); document.getElementById('btn-next-quiz').classList.add('hidden'); }
+        function submitQuizAns(ans) { let absoluteAns = isHost ? (ans === 'me' ? 'host' : 'guest') : (ans === 'me' ? 'guest' : 'host'); myQuizAns = absoluteAns; sendData({type: 'quiz-ans', ans: absoluteAns}); document.getElementById('quiz-question-container').classList.add('hidden'); checkQuizResults(); }
+        function checkQuizResults() { if(myQuizAns && partnerQuizAns) { document.getElementById('quiz-waiting').classList.add('hidden'); document.getElementById('quiz-result').classList.remove('hidden'); let resTitle = document.getElementById('quiz-result-title'); let resDetail = document.getElementById('quiz-result-detail'); if(myQuizAns === partnerQuizAns) { resTitle.innerText = "🎉 දෙන්නම එකඟයි!"; resTitle.style.color = "#2b9348"; let who = (isHost && myQuizAns === 'guest') || (!isHost && myQuizAns === 'host') ? "එයා" : "ඔයා"; resDetail.innerText = `දෙන්නම පිළිගත්තා වැඩියෙන්ම ඒ දේ කරන්නේ '${who}' කියලා! 😂❤️`; } else { resTitle.innerText = "⚔️ දෙන්නට දෙකක්!"; resTitle.style.color = "#c1121f"; resDetail.innerText = "මෙතන නම් ලොකු වලියක් යයි වගේ! 😅 දෙන්නම කියන්නේ අනිත් කෙනා කියලා."; } if(isHost) { document.getElementById('btn-next-quiz').classList.remove('hidden'); } } else if (myQuizAns) { document.getElementById('quiz-waiting').classList.remove('hidden'); } }
+        function nextQuizQ() { startQuiz(); }
+    </script>
+</body>
+</html>
