@@ -19,7 +19,7 @@ const db = getDatabase(app);
 let gameId = Math.floor(10000 + Math.random() * 90000).toString();
 let isHost = true;
 
-const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-role', 'screen-battleship-setup', 'screen-battleship-wait', 'screen-battleship-play', 'screen-quiz', 'screen-memory', 'screen-guess', 'screen-tictactoe', 'screen-hunt', 'screen-sl'];
+const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-role', 'screen-battleship-setup', 'screen-battleship-wait', 'screen-battleship-play', 'screen-quiz', 'screen-memory', 'screen-guess', 'screen-tictactoe', 'screen-hunt'];
 
 function showScreen(id) { 
     screens.forEach(s => document.getElementById(s).classList.add('hidden')); 
@@ -125,18 +125,12 @@ function setupDataHandler() {
 
         else if(data.type === 'start-ttt') { if(!isHost) initTicTacToe(data.turn); }
         else if(data.type === 'ttt-move') { processTttMove(data.index); }
-        else if(data.type === 'ttt-ready') {
-            if(isHost) tttGuestReady = true; else tttHostReady = true;
-            checkTttRestart();
-        }
 
-        // New Games Data Handlers
         else if(data.type === 'start-hunt') { initHuntBoard(data.board, data.target, data.scoreH, data.scoreG); }
         else if(data.type === 'hunt-click') { handlePartnerHuntClick(data.num); }
         else if(data.type === 'hunt-next') { initHuntBoard(data.board, data.target, data.scoreH, data.scoreG); }
 
-        else if(data.type === 'start-sl') { initSnakesLadders(data.turn); }
-        else if(data.type === 'sl-move') { processSlMove(data.player, data.dice, data.newPos, data.snake, data.ladder); }
+        else if(data.type === 'play-again') { setReadyState(data.game, data.senderTurn); }
     });
 
     const activeStatusRef = ref(db, `games/${gameId}/status`);
@@ -149,6 +143,58 @@ function setupDataHandler() {
 }
 
 window.goLobby = function() { showScreen('screen-lobby'); sendData({type: 'go-lobby'}); }
+
+// --- 0. Generic Play Again System ---
+let playAgainStatus = {
+    ttt: {host: false, guest: false},
+    mem: {host: false, guest: false},
+    battle: {host: false, guest: false},
+    guess: {host: false, guest: false},
+    hunt: {host: false, guest: false}
+};
+
+window.requestPlayAgain = function(game) {
+    let amI = isHost ? 'host' : 'guest';
+    document.getElementById(`btn-${game}-yes`).disabled = true;
+    document.getElementById(`${game}-wait-text`).classList.remove('hidden');
+    sendData({type: 'play-again', game: game, senderTurn: amI});
+    setReadyState(game, amI);
+}
+
+function setReadyState(game, player) {
+    playAgainStatus[game][player] = true;
+    if(playAgainStatus[game].host && playAgainStatus[game].guest) {
+        playAgainStatus[game] = {host: false, guest: false}; 
+        
+        if(game === 'ttt' && isHost) { 
+            let starter = Math.random() < 0.5 ? 'host' : 'guest'; 
+            sendData({type: 'start-ttt', turn: starter}); 
+            initTicTacToe(starter); 
+        }
+        else if(game === 'mem' && isHost) { window.startMemoryMatch(); }
+        else if(game === 'battle') { 
+            if(isHost) {
+                showScreen('screen-battleship-role');
+            } else {
+                showScreen('screen-battleship-wait');
+                document.getElementById('battle-wait-h3').innerText = "⏳ පොඩ්ඩක් ඉන්න...";
+                document.getElementById('battle-wait-p').innerText = "Host ඊළඟ වටය හදනකන් ඉන්න.";
+            }
+        }
+        else if(game === 'guess') { 
+            if(isHost) {
+                showScreen('screen-guess');
+                document.getElementById('guess-setup').classList.remove('hidden');
+                document.getElementById('guess-pick-secret').classList.add('hidden');
+                document.getElementById('guess-play').classList.add('hidden');
+                document.getElementById('guess-result-box').classList.add('hidden');
+            } else {
+                window.openGuessGuestWaiting();
+            }
+        }
+        else if(game === 'hunt' && isHost) { generateHuntRound(0, 0); }
+    }
+}
 
 // --- 1. Memory Match Game ---
 const memoryEmojis = ['🐶', '🍕', '🚀', '🌻', '🎈', '🧸', '💎', '🍓'];
@@ -170,6 +216,10 @@ function initMemoryMatch(board, turn) {
     scoreHost = 0; scoreGuest = 0;
     lockBoard = false;
     showScreen('screen-memory');
+    
+    document.getElementById('mem-result-box').classList.add('hidden');
+    document.getElementById('btn-mem-yes').disabled = false;
+    document.getElementById('mem-wait-text').classList.add('hidden');
     
     const grid = document.getElementById('memory-grid');
     grid.innerHTML = '';
@@ -222,10 +272,16 @@ function processMemoryFlip(i) {
             lockBoard = false;
             
             if(matchedCards.length === 16) {
-                let winner = scoreHost === scoreGuest ? 'දෙන්නම දිනුම් (Draw)!' : (scoreHost > scoreGuest ? 'Host දිනුම්!' : 'Guest දිනුම්!');
-                document.getElementById('mem-turn-indicator').innerText = "🎉 ගේම් ඉවරයි! " + winner;
+                let winner = scoreHost === scoreGuest ? '🤝 දෙන්නම සමයි (Draw)!' : 
+                    ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? '🎉 ඔයා දිනුම්!' : '😢 එයා දිනුම්!');
+                let color = scoreHost === scoreGuest ? '#0077b6' : 
+                    ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? '#2b9348' : '#c1121f');
+                
+                document.getElementById('mem-turn-indicator').innerText = "🏆 ගේම් ඉවරයි!";
                 document.getElementById('mem-turn-indicator').className = "turn-indicator my-turn";
-                document.getElementById('btn-mem-home').classList.remove('hidden');
+                document.getElementById('mem-result-text').innerText = winner;
+                document.getElementById('mem-result-text').style.color = color;
+                document.getElementById('mem-result-box').classList.remove('hidden');
             }
         }, 1200);
     }
@@ -236,7 +292,6 @@ function updateMemoryUI() {
     document.getElementById('mem-score-guest').innerText = scoreGuest;
     let amI = isHost ? 'host' : 'guest';
     let ind = document.getElementById('mem-turn-indicator');
-    document.getElementById('btn-mem-home').classList.add('hidden');
     
     if(matchedCards.length < 16) {
         if(memoryTurn === amI) {
@@ -266,7 +321,7 @@ canvas.addEventListener('mousedown', onDown); canvas.addEventListener('mousemove
 canvas.addEventListener('touchstart', onDown, {passive: false}); canvas.addEventListener('touchmove', onMove, {passive: false}); canvas.addEventListener('touchend', onUp);
 window.clearCanvasSync = function() { ctx.clearRect(0, 0, canvas.width, canvas.height); sendData({type: 'clear-pic'}); }
 
-// --- 3. Battleship (හදවත් යුද්ධය - New Logic) ---
+// --- 3. Battleship (හදවත් යුද්ධය - Real-Time Update Fix) ---
 let battleState = { h: [], t: [] }, battleData = { h: [], t: [] }, playStats = { hearts: 0, bombs: 0, done: false };
 let battleHider = null, battleSeeker = null;
 
@@ -285,6 +340,8 @@ window.selectBattleRole = function(who) {
         initBattleshipSetup();
     } else {
         showScreen('screen-battleship-wait');
+        document.getElementById('battle-wait-h3').innerText = "⏳ පොඩ්ඩක් ඉන්න...";
+        document.getElementById('battle-wait-p').innerText = "එයා බෝම්බ ටික හංගනකන් ඉන්න.";
     }
 }
 
@@ -297,6 +354,8 @@ function setBattleRoleFromPartner(hider) {
         initBattleshipSetup();
     } else {
         showScreen('screen-battleship-wait');
+        document.getElementById('battle-wait-h3').innerText = "⏳ පොඩ්ඩක් ඉන්න...";
+        document.getElementById('battle-wait-p').innerText = "එයා බෝම්බ ටික හංගනකන් ඉන්න.";
     }
 }
 
@@ -346,18 +405,21 @@ function updateSetupUI() {
 window.sendBattleshipReady = function() { 
     sendData({type: 'battle-ready', data: battleState}); 
     battleData = battleState; 
-    showScreen('screen-battleship-wait');
-    document.querySelector('#screen-battleship-wait h3').innerText = "හංගලා ඉවරයි!";
-    document.querySelector('#screen-battleship-wait p').innerText = "එයා හොයනකන් බලාගෙන ඉන්න..."; 
+    initBattleshipPlayGrid(); 
+    document.getElementById('battle-instructions').innerText = 'එයා හොයනකන් බලාගෙන ඉන්න...'; 
 }
 
 function initBattleshipPlayGrid() { 
     let amI = isHost ? 'host' : 'guest';
+    showScreen('screen-battleship-play'); 
+    
+    document.getElementById('battle-result-box').classList.add('hidden');
+    document.getElementById('btn-battle-yes').disabled = false;
+    document.getElementById('battle-wait-text').classList.add('hidden');
     if(battleSeeker === amI) {
-        showScreen('screen-battleship-play'); 
+        document.getElementById('battle-instructions').innerText = 'බෝම්බ 3කට කලින් හදවත් 3ක් හොයන්න!';
     }
     
-    document.getElementById('btn-battle-home').classList.add('hidden'); 
     playStats = { hearts: 0, bombs: 0, done: false }; 
     updatePlayUI(); 
     
@@ -407,39 +469,42 @@ function updatePlayUI() {
 function checkWinLoss() { 
     let amI = isHost ? 'host' : 'guest';
     let inst = document.getElementById('battle-instructions');
+    let resultTxt = document.getElementById('battle-result-text');
     
     if(playStats.hearts === 3) { 
         playStats.done = true; 
         if(battleSeeker === amI) {
             inst.innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; 
+            resultTxt.innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; 
+            resultTxt.style.color = '#2b9348';
             window.showToast('ඔයා දිනුම්! ❤️'); 
         } else {
-            document.querySelector('#screen-battleship-wait h3').innerText = "අයියෝ!";
-            document.querySelector('#screen-battleship-wait p').innerText = "එයා දිනුම්. ඔයාගේ හදවත් ටික හොයාගත්තා."; 
+            inst.innerText = 'අයියෝ! එයා දිනුම්.'; 
+            resultTxt.innerText = 'අයියෝ! එයා දිනුම්.'; 
+            resultTxt.style.color = '#c1121f';
         }
         showRemaining();
     } else if(playStats.bombs === 3) { 
         playStats.done = true; 
         if(battleSeeker === amI) {
             inst.innerText = '😢 බෝම්බ පෑගුනා! ඔයා පැරදුනා.'; 
+            resultTxt.innerText = '😢 බෝම්බ පෑගුනා! ඔයා පැරදුනා.'; 
+            resultTxt.style.color = '#c1121f';
             window.showToast('ගේම් ඕවර්! 💔'); 
         } else {
-            document.querySelector('#screen-battleship-wait h3').innerText = "🎉 නියමයි!";
-            document.querySelector('#screen-battleship-wait p').innerText = "එයා බෝම්බ වලට අහු වුණා. ඔයා දිනුම්!"; 
+            inst.innerText = '🎉 නියමයි! එයා බෝම්බ වලට අහු වුණා.'; 
+            resultTxt.innerText = '🎉 නියමයි! එයා බෝම්බ වලට අහු වුණා.'; 
+            resultTxt.style.color = '#2b9348';
         }
         showRemaining();
     } 
 }
 
 function showRemaining() {
-    document.getElementById('btn-battle-home').classList.remove('hidden'); 
     battleData.h.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c && c.innerHTML === '') c.innerHTML = '❤️'; }); 
     battleData.t.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c && c.innerHTML === '') c.innerHTML = '💣'; });
     
-    let amI = isHost ? 'host' : 'guest';
-    if(battleHider === amI) {
-        setTimeout(() => { document.getElementById('btn-battle-home').click(); }, 3000); // 3s wait for hider to read toast and go back
-    }
+    setTimeout(() => { document.getElementById('battle-result-box').classList.remove('hidden'); }, 1000);
 }
 
 // --- 4. Quiz ---
@@ -526,6 +591,7 @@ window.openGuessSetup = function() {
         document.getElementById('guess-setup').classList.remove('hidden');
         document.getElementById('guess-pick-secret').classList.add('hidden');
         document.getElementById('guess-play').classList.add('hidden');
+        document.getElementById('guess-result-box').classList.add('hidden');
     } else {
         window.openGuessGuestWaiting();
     }
@@ -534,10 +600,11 @@ window.openGuessSetup = function() {
 window.openGuessGuestWaiting = function() {
     showScreen('screen-guess');
     document.getElementById('guess-setup').classList.add('hidden');
+    document.getElementById('guess-play').classList.add('hidden');
+    document.getElementById('guess-result-box').classList.add('hidden');
     let pickDiv = document.getElementById('guess-pick-secret');
     pickDiv.innerHTML = '<div class="result-box"><h3>⏳ පොඩ්ඩක් ඉන්න...</h3><p>Host උපරිම ඉලක්කම තෝරනකන් ඉන්න.</p></div>';
     pickDiv.classList.remove('hidden');
-    document.getElementById('guess-play').classList.add('hidden');
 }
 
 window.startGameGuess = function() {
@@ -557,6 +624,9 @@ function initPickSecret(max, turn) {
     showScreen('screen-guess');
     document.getElementById('guess-setup').classList.add('hidden');
     document.getElementById('guess-play').classList.add('hidden');
+    document.getElementById('guess-result-box').classList.add('hidden');
+    document.getElementById('btn-guess-yes').disabled = false;
+    document.getElementById('guess-wait-text').classList.add('hidden');
     
     let pickDiv = document.getElementById('guess-pick-secret');
     pickDiv.classList.remove('hidden');
@@ -595,7 +665,6 @@ function startGuessingPhase() {
     document.getElementById('guess-hint-text').style.color = "#590d22";
     document.getElementById('partner-hint-text').innerHTML = ""; 
     document.getElementById('guess-input').value = '';
-    document.getElementById('btn-guess-home').classList.add('hidden');
     
     updateGuessUI();
 }
@@ -644,23 +713,23 @@ function handleWin(winner) {
     isGuessGameOver = true;
     let amIWinner = (winner === (isHost ? 'host' : 'guest'));
     
-    let hintText = document.getElementById('guess-hint-text');
-    document.getElementById('partner-hint-text').innerHTML = '';
+    let resultTxt = document.getElementById('guess-result-text');
+    document.getElementById('guess-hint-text').innerHTML = "";
+    document.getElementById('partner-hint-text').innerHTML = "";
     
     if(amIWinner) {
-        hintText.innerHTML = `🎉 සුපිරි! ඔයා දිනුම්! එයා හිතපු ඉලක්කම: <b>${partnerSecret}</b>`;
-        hintText.style.color = "#2b9348";
+        resultTxt.innerText = `🎉 සුපිරි! ඔයා දිනුම්! එයා හිතපු ඉලක්කම: ${partnerSecret}`;
+        resultTxt.style.color = "#2b9348";
         sendData({type: 'guess-win'}); 
     } else {
-        hintText.innerHTML = `😢 අඩේ! එයා දිනුම්! එයා ඔයාගේ ඉලක්කම හොයාගත්තා. <br>එයා හිතලා තිබ්බේ: <b>${partnerSecret}</b>`;
-        hintText.style.color = "#c1121f";
+        resultTxt.innerText = `😢 අඩේ! එයා දිනුම්! එයා හිතලා තිබ්බේ: ${partnerSecret}`;
+        resultTxt.style.color = "#c1121f";
     }
     
-    document.getElementById('btn-guess-home').classList.remove('hidden');
+    document.getElementById('guess-result-box').classList.remove('hidden');
     document.getElementById('guess-turn-indicator').innerText = amIWinner ? `🏆 ඔයා දිනුම්!` : `🏆 එයා දිනුම්!`;
     document.getElementById('guess-turn-indicator').className = "turn-indicator my-turn";
     document.getElementById('btn-submit-guess').disabled = true;
-    window.showToast("ගේම් ඉවරයි! 🎯");
 }
 
 function updateGuessUI() {
@@ -683,8 +752,6 @@ function updateGuessUI() {
 let tttBoard = Array(9).fill(null);
 let tttTurn = 'host';
 let tttGameOver = false;
-let tttHostReady = false;
-let tttGuestReady = false;
 
 const winPatterns = [
     [0,1,2], [3,4,5], [6,7,8], 
@@ -703,14 +770,11 @@ function initTicTacToe(turn) {
     tttBoard = Array(9).fill(null);
     tttTurn = turn; 
     tttGameOver = false;
-    tttHostReady = false;
-    tttGuestReady = false;
     
     showScreen('screen-tictactoe');
     document.getElementById('ttt-result-box').classList.add('hidden');
-    document.getElementById('ttt-wait-text').classList.add('hidden');
     document.getElementById('btn-ttt-yes').disabled = false;
-    document.getElementById('btn-ttt-home').classList.add('hidden');
+    document.getElementById('ttt-wait-text').classList.add('hidden');
     
     const grid = document.getElementById('ttt-grid');
     grid.innerHTML = '';
@@ -777,23 +841,6 @@ function handleTttEnd(result, winner) {
     document.getElementById('ttt-turn-indicator').className = "turn-indicator my-turn";
 }
 
-window.tttPlayAgain = function() {
-    document.getElementById('btn-ttt-yes').disabled = true;
-    document.getElementById('ttt-wait-text').classList.remove('hidden');
-    
-    if(isHost) tttHostReady = true; else tttGuestReady = true;
-    sendData({type: 'ttt-ready'});
-    
-    checkTttRestart();
-}
-
-function checkTttRestart() {
-    if(tttHostReady && tttGuestReady) {
-        let starter = Math.random() < 0.5 ? 'host' : 'guest';
-        initTicTacToe(starter); 
-    }
-}
-
 function updateTttUI() {
     if(tttGameOver) return;
     let amI = isHost ? 'host' : 'guest';
@@ -830,14 +877,16 @@ function generateHuntRound(scoreH, scoreG) {
 function initHuntBoard(board, target, scoreH, scoreG) {
     huntBoard = board; huntTarget = target; huntScoreH = scoreH; huntScoreG = scoreG;
     showScreen('screen-hunt');
-    document.getElementById('hunt-winner-text').classList.add('hidden');
-    document.getElementById('btn-hunt-home').classList.add('hidden');
+    
+    document.getElementById('hunt-result-box').classList.add('hidden');
+    document.getElementById('btn-hunt-yes').disabled = false;
+    document.getElementById('hunt-wait-text').classList.add('hidden');
     
     document.getElementById('hunt-score-host').innerText = scoreH;
     document.getElementById('hunt-score-guest').innerText = scoreG;
     document.getElementById('hunt-target-box').innerText = target;
     
-    if (scoreH === 5 || scoreG === 5) {
+    if (scoreH >= 5 || scoreG >= 5) {
         endHuntGame(); return;
     }
     
@@ -872,135 +921,16 @@ function handlePartnerHuntClick(num) {
 
 function endHuntGame() {
     document.getElementById('hunt-grid').innerHTML = '';
-    let winner = document.getElementById('hunt-winner-text');
+    document.getElementById('hunt-target-box').innerText = '--';
+    let winner = document.getElementById('hunt-result-text');
     let amI = isHost ? 'host' : 'guest';
     
-    if ((huntScoreH === 5 && amI === 'host') || (huntScoreG === 5 && amI === 'guest')) {
+    if ((huntScoreH >= 5 && amI === 'host') || (huntScoreG >= 5 && amI === 'guest')) {
         winner.innerText = "🎉 සුපිරි! ඔයා දිනුම්!";
+        winner.style.color = "#2b9348";
     } else {
         winner.innerText = "😢 අඩේ! එයා දිනුම්!";
         winner.style.color = "#c1121f";
     }
-    winner.classList.remove('hidden');
-    document.getElementById('btn-hunt-home').classList.remove('hidden');
-}
-
-
-// --- 9. Snakes and Ladders (නයා සහ ඉණිමඟ) ---
-let slPosHost = 1, slPosGuest = 1, slTurn = 'host', isSlGameOver = false;
-
-const slMap = {
-    16:6, 47:26, 49:11, 56:53, 62:19, 64:60, 87:24, 93:73, 95:75, 98:78, // Snakes
-    1:38, 4:14, 9:31, 21:42, 28:84, 36:44, 51:67, 71:91, 80:100 // Ladders
-};
-
-window.startSnakesLadders = function() {
-    if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
-    let starter = Math.random() < 0.5 ? 'host' : 'guest';
-    sendData({type: 'start-sl', turn: starter});
-    initSnakesLadders(starter);
-}
-
-function initSnakesLadders(turn) {
-    slPosHost = 1; slPosGuest = 1; slTurn = turn; isSlGameOver = false;
-    showScreen('screen-sl');
-    document.getElementById('sl-winner-text').classList.add('hidden');
-    document.getElementById('btn-sl-home').classList.add('hidden');
-    document.getElementById('sl-dice-result').innerText = '🎲';
-    renderSlBoard();
-    updateSlUI();
-}
-
-function renderSlBoard() {
-    const grid = document.getElementById('sl-grid');
-    grid.innerHTML = '';
-    
-    // Zig-Zag Board 100 to 1
-    for (let row = 9; row >= 0; row--) {
-        for (let col = 0; col < 10; col++) {
-            let num = (row % 2 === 1) ? (row * 10 + col + 1) : (row * 10 + 9 - col + 1);
-            let cell = document.createElement('div');
-            cell.className = 'sl-cell';
-            
-            if(slMap[num] && slMap[num] < num) cell.classList.add('snake-head');
-            if(slMap[num] && slMap[num] > num) cell.classList.add('ladder-base');
-            
-            cell.innerHTML = `${num}<div class="sl-tokens" id="sl-cell-${num}"></div>`;
-            grid.appendChild(cell);
-        }
-    }
-    
-    document.getElementById(`sl-cell-${slPosHost}`).innerHTML += '🔴';
-    document.getElementById(`sl-cell-${slPosGuest}`).innerHTML += '🔵';
-    document.getElementById('sl-pos-me').innerText = isHost ? slPosHost : slPosGuest;
-    document.getElementById('sl-pos-them').innerText = isHost ? slPosGuest : slPosHost;
-}
-
-window.slRollDice = function() {
-    let amI = isHost ? 'host' : 'guest';
-    if(slTurn !== amI || isSlGameOver) return window.showToast("දැන් එයාගේ වාරේ!");
-    
-    let dice = Math.floor(Math.random() * 6) + 1;
-    let oldPos = amI === 'host' ? slPosHost : slPosGuest;
-    let newPos = oldPos + dice;
-    
-    if(newPos > 100) newPos = 100;
-    
-    let snake = false, ladder = false;
-    if(slMap[newPos]) {
-        if(slMap[newPos] < newPos) snake = true;
-        else ladder = true;
-        newPos = slMap[newPos];
-    }
-    
-    sendData({type: 'sl-move', player: amI, dice: dice, newPos: newPos, snake: snake, ladder: ladder});
-    processSlMove(amI, dice, newPos, snake, ladder);
-}
-
-function processSlMove(player, dice, newPos, snake, ladder) {
-    document.getElementById('sl-dice-result').innerText = `🎲 ${dice}`;
-    
-    if(snake) window.showToast(`🐍 අයියෝ! නයෙක් කෑවා!`);
-    if(ladder) window.showToast(`🪜 නියමයි! ඉණිමඟක්!`);
-    
-    if(player === 'host') slPosHost = newPos;
-    else slPosGuest = newPos;
-    
-    renderSlBoard();
-    
-    if(newPos === 100) {
-        isSlGameOver = true;
-        let amI = isHost ? 'host' : 'guest';
-        let winnerTxt = document.getElementById('sl-winner-text');
-        winnerTxt.classList.remove('hidden');
-        document.getElementById('btn-sl-home').classList.remove('hidden');
-        document.getElementById('btn-sl-roll').disabled = true;
-        
-        if(player === amI) {
-            winnerTxt.innerText = "🎉 සුපිරි! ඔයා දිනුම්!";
-            window.showToast("ඔයා දිනුම්!");
-        } else {
-            winnerTxt.innerText = "😢 අඩේ! එයා දිනුම්!";
-            winnerTxt.style.color = "#c1121f";
-        }
-    } else {
-        slTurn = slTurn === 'host' ? 'guest' : 'host';
-        updateSlUI();
-    }
-}
-
-function updateSlUI() {
-    if(isSlGameOver) return;
-    let amI = isHost ? 'host' : 'guest';
-    let ind = document.getElementById('sl-turn-indicator');
-    
-    if(slTurn === amI) {
-        ind.innerText = "👉 දැන් ඔයාගේ වාරේ (දාදු කැටය දාන්න)";
-        ind.className = "turn-indicator my-turn";
-        document.getElementById('btn-sl-roll').disabled = false;
-    } else {
-        ind.innerText = "⏳ දැන් එයාගේ වාරේ...";
-        ind.className = "turn-indicator their-turn";
-        document.getElementById('btn-sl-roll').disabled = true;
-    }
+    document.getElementById('hunt-result-box').classList.remove('hidden');
 }
