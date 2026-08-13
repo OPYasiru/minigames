@@ -60,12 +60,5 @@ canvas { width: 100%; height: 350px; touch-action: none; display: block; }
 .h-cell { aspect-ratio: 1; background: #ffb3c6; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; cursor: pointer; color: #590d22; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.1); }
 .h-cell:active { transform: translateY(3px); box-shadow: none; }
 
-/* Snakes and Ladders */
-.sl-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; margin: 15px 0; background: #590d22; padding: 3px; border-radius: 8px;}
-.sl-cell { aspect-ratio: 1; background: #ffccd5; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #590d22; position: relative; border-radius: 2px;}
-.sl-cell.snake-head { background: #ff99a8; border: 1px solid #c1121f; }
-.sl-cell.ladder-base { background: #c1f2c7; border: 1px solid #2b9348; }
-.sl-tokens { position: absolute; font-size: 12px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; width: 100%; height: 100%; pointer-events: none; }
-
 #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(89, 13, 34, 0.9); color: white; padding: 12px 25px; border-radius: 30px; z-index: 1000; transition: 0.4s; opacity: 0; pointer-events: none; font-weight: bold; text-align: center; width: max-content; max-width: 90%; }
 #toast.show { opacity: 1; top: 40px; }
