@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, push, onChildAdded, onDisconnect, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-// ඔයාගේ FIREBASE CONFIG එක
+// 🛑 ඔයාගේ FIREBASE CONFIG 🛑
 const firebaseConfig = {
     apiKey: "AIzaSyDpK3gJkai7LtAT35h5XjX1CysTIkDh1X4",
     authDomain: "minigames-4d677.firebaseapp.com",
@@ -13,7 +13,6 @@ const firebaseConfig = {
     measurementId: "G-6RFBRJ09B3"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -27,7 +26,7 @@ function showScreen(id) {
     document.getElementById(id).classList.remove('hidden'); 
 }
 
-function showToast(msg) { 
+window.showToast = function(msg) { 
     const t = document.getElementById('toast'); 
     t.innerText = msg; 
     t.classList.add('show'); 
@@ -42,26 +41,23 @@ document.getElementById('conn-status').style.color = 'green';
 const statusRef = ref(db, `games/${gameId}/status`);
 const gameRef = ref(db, `games/${gameId}`);
 
-// Host creates the room
 set(statusRef, 'waiting');
-onDisconnect(gameRef).remove(); // Clean up if host leaves
+onDisconnect(gameRef).remove(); 
 
-// Host listens for guest
 onValue(statusRef, snap => {
     if(isHost && snap.val() === 'connected') {
         showScreen('screen-lobby');
-        showToast('🥰 පාට්නර් එකතු වුණා!');
+        window.showToast('🥰 පාට්නර් එකතු වුණා!');
         setupDataHandler();
     }
 });
 
-// Guest joins
 window.joinGame = function() {
     const enteredId = document.getElementById('join-id').value.trim();
-    if(!enteredId || enteredId.length !== 5) return showToast('කරුණාකර ඉලක්කම් 5ක කෝඩ් එකක් දෙන්න!');
-    if(enteredId === gameId) return showToast('ඔයාගේ කෝඩ් එකටම සම්බන්ධ වෙන්න බැහැ!');
+    if(!enteredId || enteredId.length !== 5) return window.showToast('කරුණාකර ඉලක්කම් 5ක කෝඩ් එකක් දෙන්න!');
+    if(enteredId === gameId) return window.showToast('ඔයාගේ කෝඩ් එකටම සම්බන්ධ වෙන්න බැහැ!');
 
-    showToast('සම්බන්ධ වෙමින් පවතී... (Please wait)');
+    window.showToast('සම්බන්ධ වෙමින් පවතී... (Please wait)');
     const btn = document.getElementById('join-btn');
     btn.innerText = 'Connecting...'; 
     btn.disabled = true;
@@ -77,21 +73,20 @@ window.joinGame = function() {
             
             showScreen('screen-lobby');
             document.getElementById('lobby-content').innerHTML = '<h3>🥰 පාට්නර් ගේම් එකක් තෝරනකන් ඉන්න...</h3>';
-            showToast('සාර්ථකව එකතු වුණා!');
+            window.showToast('සාර්ථකව එකතු වුණා!');
             setupDataHandler();
         } else {
-            showToast('කෝඩ් එක වැරදියි හෝ පාට්නර් ගේම් එකේ නැහැ!');
+            window.showToast('කෝඩ් එක වැරදියි හෝ පාට්නර් ගේම් එකේ නැහැ!');
             btn.innerText = 'Join Game'; 
             btn.disabled = false;
         }
     }).catch(error => {
-        showToast('Network error එකක්! අන්තර්ජාලය පරීක්ෂා කරන්න.');
+        window.showToast('Network error එකක්! අන්තර්ජාලය පරීක්ෂා කරන්න.');
         btn.innerText = 'Join Game'; 
         btn.disabled = false;
     });
 }
 
-// Firebase Sync Wrapper
 function sendData(data) {
     const messagesRef = ref(db, `games/${gameId}/messages`);
     push(messagesRef, {
@@ -105,10 +100,9 @@ function setupDataHandler() {
     onChildAdded(messagesRef, snap => {
         const msg = snap.val();
         if (!msg) return;
-        if (msg.sender === (isHost ? 'host' : 'guest')) return; // Ignore own messages
+        if (msg.sender === (isHost ? 'host' : 'guest')) return; 
 
         const data = msg.data;
-        // Game Logic Handling
         if(data.type === 'go-lobby') showScreen('screen-lobby');
         else if(data.type === 'start-pic') initPictionary();
         else if(data.type === 'draw') drawLine(data.x0, data.y0, data.x1, data.y1, data.color, false);
@@ -120,10 +114,13 @@ function setupDataHandler() {
         else if(data.type === 'quiz-ans') { partnerQuizAns = data.ans; checkQuizResults(); }
         else if(data.type === 'start-memory') { if(!isHost) initMemoryMatch(data.board); }
         else if(data.type === 'memory-flip') processMemoryFlip(data.index);
+        
         // Guess the Number Handlers
-        else if(data.type === 'start-guess-setup') { if(!isHost) openGuessGuestWaiting(); }
-        else if(data.type === 'guess-init') { initGuessPlay(data.max, data.secret); }
-        else if(data.type === 'guess-submit') { processGuess(data.guess, data.senderTurn); }
+        else if(data.type === 'start-guess-setup') { if(!isHost) window.openGuessGuestWaiting(); }
+        else if(data.type === 'guess-range') { initPickSecret(data.max); }
+        else if(data.type === 'guess-secret') { partnerSecret = data.secret; checkBothSecrets(); }
+        else if(data.type === 'guess-try') { processPartnerGuess(data.guess); }
+        else if(data.type === 'guess-win') { handleWin(isHost ? 'guest' : 'host'); }
     });
 
     const activeStatusRef = ref(db, `games/${gameId}/status`);
@@ -143,7 +140,7 @@ let memoryBoard = [], flippedCards = [], matchedCards = [];
 let memoryTurn = 'host', scoreHost = 0, scoreGuest = 0, lockBoard = false;
 
 window.startMemoryMatch = function() {
-    if(!isHost) return showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
+    if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
     memoryBoard = [...memoryEmojis, ...memoryEmojis].sort(() => Math.random() - 0.5);
     sendData({type: 'start-memory', board: memoryBoard});
     initMemoryMatch(memoryBoard);
@@ -171,7 +168,7 @@ function initMemoryMatch(board) {
 function handleMemoryClick(i) {
     if(lockBoard || flippedCards.includes(i) || matchedCards.includes(i)) return;
     let amI = isHost ? 'host' : 'guest';
-    if(memoryTurn !== amI) return showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
+    if(memoryTurn !== amI) return window.showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
     
     sendData({type: 'memory-flip', index: i});
     processMemoryFlip(i);
@@ -194,7 +191,7 @@ function processMemoryFlip(i) {
                 document.getElementById(`mem-card-${idx1}`).classList.add('matched');
                 document.getElementById(`mem-card-${idx2}`).classList.add('matched');
                 if(memoryTurn === 'host') scoreHost++; else scoreGuest++;
-                showToast("නියමයි! ගැලපෙනවා! 🎯");
+                window.showToast("නියමයි! ගැලපෙනවා! 🎯");
             } else {
                 let c1 = document.getElementById(`mem-card-${idx1}`);
                 let c2 = document.getElementById(`mem-card-${idx2}`);
@@ -235,7 +232,8 @@ function updateMemoryUI() {
 }
 
 // --- 2. Pictionary ---
-const canvas = document.getElementById('drawing-board'); const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('drawing-board'); 
+const ctx = canvas.getContext('2d');
 let isDrawing = false, currentX = 0, currentY = 0, myColor = '#ff4d6d';
 function resizeCanvas() { const rect = canvas.parentElement.getBoundingClientRect(); canvas.width = rect.width; canvas.height = rect.height || 350; }
 window.startPictionary = function() { sendData({type: 'start-pic'}); initPictionary(); }
@@ -259,11 +257,11 @@ function updateSetupUI() { document.getElementById('setup-h').innerText = 3 - ba
 window.sendBattleshipReady = function() { sendData({type: 'battle-ready', data: battleState}); battleData = battleState; showScreen('screen-battleship-play'); document.getElementById('battle-instructions').innerText = 'එයා හොයනකන් බලාගෙන ඉන්න...'; initBattleshipPlayGrid(true); }
 function initBattleshipGuest() { showScreen('screen-lobby'); document.getElementById('lobby-content').innerHTML = '<h3>හංගනකන් ඉන්න... 🤫</h3>'; }
 function initBattleshipPlayGrid(isViewer = false) { if(!isViewer) { showScreen('screen-battleship-play'); document.getElementById('battle-instructions').innerText = 'හදවත් 3ක් හොයාගන්න! බෝම්බත් තියෙනවා!'; } document.getElementById('btn-battle-home').classList.add('hidden'); playStats = { hearts: 0, tries: 7, done: false }; updatePlayUI(); const grid = document.getElementById('play-grid'); grid.innerHTML = ''; for(let i=0; i<25; i++) { let cell = document.createElement('div'); cell.className = 'cell'; cell.id = `bcell-${i}`; if(!isViewer) { cell.onclick = () => { if(playStats.done) return; sendData({type: 'battle-click', index: i}); processBattleClick(i); }; } grid.appendChild(cell); } }
-function processBattleClick(i) { if(playStats.done) return; const cell = document.getElementById(`bcell-${i}`); if(cell.innerHTML !== '') return; playStats.tries--; if(battleData.h.includes(i)) { cell.classList.add('revealed-heart'); cell.innerHTML = '❤️'; playStats.hearts++; showToast('නියමයි! ❤️ එකක් හම්බුනා!'); } else if(battleData.t.includes(i)) { cell.classList.add('revealed-trap'); cell.innerHTML = '💣'; showToast('අයියෝ! බෝම්බෙකට අහු වුණා!'); } else { cell.classList.add('revealed-empty'); cell.innerHTML = '☁️'; } updatePlayUI(); checkWinLoss(); }
+function processBattleClick(i) { if(playStats.done) return; const cell = document.getElementById(`bcell-${i}`); if(cell.innerHTML !== '') return; playStats.tries--; if(battleData.h.includes(i)) { cell.classList.add('revealed-heart'); cell.innerHTML = '❤️'; playStats.hearts++; window.showToast('නියමයි! ❤️ එකක් හම්බුනා!'); } else if(battleData.t.includes(i)) { cell.classList.add('revealed-trap'); cell.innerHTML = '💣'; window.showToast('අයියෝ! බෝම්බෙකට අහු වුණා!'); } else { cell.classList.add('revealed-empty'); cell.innerHTML = '☁️'; } updatePlayUI(); checkWinLoss(); }
 function updatePlayUI() { document.getElementById('play-h').innerText = `${playStats.hearts}/3`; document.getElementById('play-c').innerText = playStats.tries; }
-function checkWinLoss() { if(playStats.hearts === 3) { playStats.done = true; document.getElementById('battle-instructions').innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; showToast('දෙන්නා දිනුම්! ❤️'); document.getElementById('btn-battle-home').classList.remove('hidden'); } else if(playStats.tries === 0) { playStats.done = true; document.getElementById('battle-instructions').innerText = '😢 චාන්ස් ඉවරයි! ඔයා පැරදුනා.'; showToast('ගේම් ඕවර්! 💔'); battleData.h.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c.innerHTML === '') c.innerHTML = '❤️'; }); document.getElementById('btn-battle-home').classList.remove('hidden'); } }
+function checkWinLoss() { if(playStats.hearts === 3) { playStats.done = true; document.getElementById('battle-instructions').innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; window.showToast('දෙන්නා දිනුම්! ❤️'); document.getElementById('btn-battle-home').classList.remove('hidden'); } else if(playStats.tries === 0) { playStats.done = true; document.getElementById('battle-instructions').innerText = '😢 චාන්ස් ඉවරයි! ඔයා පැරදුනා.'; window.showToast('ගේම් ඕවර්! 💔'); battleData.h.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c.innerHTML === '') c.innerHTML = '❤️'; }); document.getElementById('btn-battle-home').classList.remove('hidden'); } }
 
-// --- 4. Quiz Game (No Duplicates) ---
+// --- 4. Quiz (No Duplicates) ---
 const quizQuestions = [
     "කවුද වැඩියෙන්ම කේන්ති ගන්නේ? 😡", "කවුද වැඩියෙන්ම කන්න පෙරේත? 🍕", "කවුද මුලින්ම 'ආදරෙයි' කිව්වේ? ❤️",
     "කවුද මුලින්ම යාළු වෙන්න ඇහුවේ? 😍", "කවුද වැඩියෙන්ම නිදාගන්නේ? 😴", "කවුද වැඩියෙන්ම සල්ලි වියදම් කරන්නේ? 💸",
@@ -287,10 +285,10 @@ let availableQuestions = [];
 let currentQIndex = 0, myQuizAns = null, partnerQuizAns = null;
 
 window.startQuiz = function() { 
-    if(!isHost) return showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); 
+    if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); 
     if (availableQuestions.length === 0) {
         availableQuestions = quizQuestions.map((_, index) => index);
-        showToast("අලුත් වටයක් පටන් ගත්තා! 🔄");
+        window.showToast("අලුත් වටයක් පටන් ගත්තා! 🔄");
     }
     const randomIndex = Math.floor(Math.random() * availableQuestions.length);
     currentQIndex = availableQuestions[randomIndex];
@@ -344,48 +342,83 @@ function checkQuizResults() {
 window.nextQuizQ = function() { window.startQuiz(); }
 
 // --- 5. Guess the Number ---
-let guessSecret = 0, guessMax = 100, guessTurn = 'host', isGuessGameOver = false;
+let guessMax = 100, mySecret = null, partnerSecret = null;
+let guessTurn = 'host', isGuessGameOver = false;
 
 window.openGuessSetup = function() {
     sendData({type: 'start-guess-setup'});
     if(isHost) {
         showScreen('screen-guess');
         document.getElementById('guess-setup').classList.remove('hidden');
-        document.getElementById('guess-waiting').classList.add('hidden');
+        document.getElementById('guess-pick-secret').classList.add('hidden');
         document.getElementById('guess-play').classList.add('hidden');
     } else {
-        openGuessGuestWaiting();
+        window.openGuessGuestWaiting();
     }
 }
 
 window.openGuessGuestWaiting = function() {
     showScreen('screen-guess');
     document.getElementById('guess-setup').classList.add('hidden');
-    document.getElementById('guess-waiting').classList.remove('hidden');
+    let pickDiv = document.getElementById('guess-pick-secret');
+    pickDiv.innerHTML = '<div class="result-box"><h3>⏳ පොඩ්ඩක් ඉන්න...</h3><p>Host උපරිම ඉලක්කම තෝරනකන් ඉන්න.</p></div>';
+    pickDiv.classList.remove('hidden');
     document.getElementById('guess-play').classList.add('hidden');
 }
 
 window.startGameGuess = function() {
     guessMax = parseInt(document.getElementById('guess-max-limit').value);
-    guessSecret = Math.floor(Math.random() * guessMax) + 1;
-    sendData({type: 'guess-init', max: guessMax, secret: guessSecret});
-    initGuessPlay(guessMax, guessSecret);
+    sendData({type: 'guess-range', max: guessMax});
+    initPickSecret(guessMax);
 }
 
-function initGuessPlay(max, secret) {
+function initPickSecret(max) {
     guessMax = max;
-    guessSecret = secret;
-    guessTurn = 'host';
+    mySecret = null;
+    partnerSecret = null;
     isGuessGameOver = false;
+    guessTurn = 'host';
     
     showScreen('screen-guess');
     document.getElementById('guess-setup').classList.add('hidden');
-    document.getElementById('guess-waiting').classList.add('hidden');
+    document.getElementById('guess-play').classList.add('hidden');
+    
+    let pickDiv = document.getElementById('guess-pick-secret');
+    pickDiv.classList.remove('hidden');
+    pickDiv.innerHTML = `
+        <p>1 ත් ${max} ත් අතර ඔයාගේ රහස් ඉලක්කම හිතාගෙන මෙතන ගහන්න! 🤫</p>
+        <input type="number" id="secret-input" placeholder="රහස් ඉලක්කම..." style="padding: 12px; border-radius: 15px; border: 2px solid #ffb3c6; text-align: center; font-size: 16px; width: 85%; margin-bottom: 15px; outline: none; background: #fff0f3;">
+        <button onclick="submitSecret()">ලෑස්තියි</button>
+        <p id="secret-wait-text" class="hidden" style="color: #2b9348; margin-top: 15px; font-weight: bold;">⏳ පාට්නර් ඉලක්කම හිතනකන් ඉන්න...</p>
+    `;
+}
+
+window.submitSecret = function() {
+    let val = parseInt(document.getElementById('secret-input').value);
+    if(isNaN(val) || val < 1 || val > guessMax) return window.showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
+    
+    mySecret = val;
+    document.getElementById('secret-input').disabled = true;
+    document.getElementById('secret-wait-text').classList.remove('hidden');
+    
+    sendData({type: 'guess-secret', secret: mySecret});
+    checkBothSecrets();
+}
+
+function checkBothSecrets() {
+    if(mySecret !== null && partnerSecret !== null) {
+        startGuessingPhase();
+    }
+}
+
+function startGuessingPhase() {
+    document.getElementById('guess-pick-secret').classList.add('hidden');
     document.getElementById('guess-play').classList.remove('hidden');
     
-    document.getElementById('guess-instruction').innerText = `1 ඉඳන් ${max} ට අඩු ඉලක්කමක් මම හිතුවා! 🤫`;
-    document.getElementById('guess-hint-text').innerHTML = "මුලින්ම ගෙස් කරන්න පටන්ගමු 👇";
+    document.getElementById('guess-instruction').innerText = `දැන් එයා හිතපු ඉලක්කම හොයමු! (උපරිමය ${guessMax})`;
+    document.getElementById('guess-hint-text').innerHTML = "ඔයාගේ ගෙස් එක ගහන්න 👇";
     document.getElementById('guess-hint-text').style.color = "#590d22";
+    document.getElementById('partner-hint-text').innerHTML = ""; 
     document.getElementById('guess-input').value = '';
     document.getElementById('btn-guess-home').classList.add('hidden');
     
@@ -394,40 +427,65 @@ function initGuessPlay(max, secret) {
 
 window.submitGuess = function() {
     let amI = isHost ? 'host' : 'guest';
-    if(guessTurn !== amI || isGuessGameOver) return showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
+    if(guessTurn !== amI || isGuessGameOver) return window.showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
     
     let myGuess = parseInt(document.getElementById('guess-input').value);
-    if(isNaN(myGuess) || myGuess < 1 || myGuess > guessMax) return showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
+    if(isNaN(myGuess) || myGuess < 1 || myGuess > guessMax) return window.showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
     
-    sendData({type: 'guess-submit', guess: myGuess, senderTurn: amI});
-    processGuess(myGuess, amI);
     document.getElementById('guess-input').value = '';
-}
-
-function processGuess(guess, player) {
-    let hintText = document.getElementById('guess-hint-text');
-    let who = (player === (isHost ? 'host' : 'guest')) ? "ඔයා" : "එයා";
     
-    if(guess === guessSecret) {
-        hintText.innerHTML = `🎉 සුපිරි! <b>${who}</b> හරි ඉලක්කම හොයාගත්තා! <br><br> රහස් ඉලක්කම: ${guessSecret}`;
-        hintText.style.color = "#2b9348";
-        isGuessGameOver = true;
-        document.getElementById('btn-guess-home').classList.remove('hidden');
-        document.getElementById('guess-turn-indicator').innerText = `🏆 ගේම් ඉවරයි! ${who} දිනුම්!`;
-        document.getElementById('guess-turn-indicator').className = "turn-indicator my-turn";
-        document.getElementById('btn-submit-guess').disabled = true;
-        showToast("දිනුම්! 🎯");
+    if(myGuess === partnerSecret) {
+        handleWin(amI);
     } else {
-        if(guess < guessSecret) {
-            hintText.innerHTML = `⬆️ <b>${guess}</b> ට වඩා වැඩියි! <br><span style="font-size:14px;color:#800f2f;">(${who}ගේ ගෙස් එක)</span>`;
+        let hintText = document.getElementById('guess-hint-text');
+        if(myGuess < partnerSecret) {
+            hintText.innerHTML = `⬆️ මදි! එයා හිතපු ඉලක්කම <b>${myGuess}</b> ට වඩා වැඩියි!`;
             hintText.style.color = "#0077b6";
         } else {
-            hintText.innerHTML = `⬇️ <b>${guess}</b> ට වඩා අඩුයි! <br><span style="font-size:14px;color:#800f2f;">(${who}ගේ ගෙස් එක)</span>`;
+            hintText.innerHTML = `⬇️ වැඩියි! එයා හිතපු ඉලක්කම <b>${myGuess}</b> ට වඩා අඩුයි!`;
             hintText.style.color = "#c1121f";
         }
+        
         guessTurn = guessTurn === 'host' ? 'guest' : 'host';
+        sendData({type: 'guess-try', guess: myGuess});
         updateGuessUI();
     }
+}
+
+function processPartnerGuess(guess) {
+    let hintText = document.getElementById('partner-hint-text');
+    
+    if(guess < mySecret) {
+        hintText.innerHTML = `💡 එයා <b>${guess}</b> ගැහුවා. ඒක ඔයාගේ ඉලක්කමට වඩා අඩුයි!`;
+    } else {
+        hintText.innerHTML = `💡 එයා <b>${guess}</b> ගැහුවා. ඒක ඔයාගේ ඉලක්කමට වඩා වැඩියි!`;
+    }
+    
+    guessTurn = guessTurn === 'host' ? 'guest' : 'host';
+    updateGuessUI();
+}
+
+function handleWin(winner) {
+    isGuessGameOver = true;
+    let amIWinner = (winner === (isHost ? 'host' : 'guest'));
+    
+    let hintText = document.getElementById('guess-hint-text');
+    document.getElementById('partner-hint-text').innerHTML = '';
+    
+    if(amIWinner) {
+        hintText.innerHTML = `🎉 සුපිරි! ඔයා දිනුම්! එයා හිතපු ඉලක්කම: <b>${partnerSecret}</b>`;
+        hintText.style.color = "#2b9348";
+        sendData({type: 'guess-win'}); 
+    } else {
+        hintText.innerHTML = `😢 අඩේ! එයා දිනුම්! එයා ඔයාගේ ඉලක්කම හොයාගත්තා. <br>එයා හිතලා තිබ්බේ: <b>${partnerSecret}</b>`;
+        hintText.style.color = "#c1121f";
+    }
+    
+    document.getElementById('btn-guess-home').classList.remove('hidden');
+    document.getElementById('guess-turn-indicator').innerText = amIWinner ? `🏆 ඔයා දිනුම්!` : `🏆 එයා දිනුම්!`;
+    document.getElementById('guess-turn-indicator').className = "turn-indicator my-turn";
+    document.getElementById('btn-submit-guess').disabled = true;
+    window.showToast("ගේම් ඉවරයි! 🎯");
 }
 
 function updateGuessUI() {
