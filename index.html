@@ -52,7 +52,6 @@
             <button onclick="startPictionary()">🎨 චිත්‍ර අඳිමු</button>
             <button onclick="openGuessSetup()">🔢 ඉලක්කම හොයමු</button>
             <button onclick="startNumberHunt()">🎯 ඉලක්කම් දඩයම (Speed)</button>
-            <button onclick="startSnakesLadders()">🐍 නයා සහ ඉණිමඟ</button>
         </div>
     </div>
 
@@ -61,15 +60,16 @@
         <h2>❌❤️ ටික් ටැක් ටෝ</h2>
         <div id="ttt-turn-indicator" class="turn-indicator"></div>
         <div class="ttt-grid" id="ttt-grid"></div>
+        
         <div id="ttt-result-box" class="result-box hidden">
             <h3 id="ttt-result-text"></h3>
-            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-                <button onclick="tttPlayAgain()" id="btn-ttt-yes" style="width: 45%; padding: 10px;">ආයෙත්</button>
-                <button class="secondary" onclick="goLobby()" style="width: 45%; padding: 10px;">ලොබියට</button>
+            <p style="margin-bottom: 15px; color: #590d22; font-weight: bold;">ආයෙත් සෙල්ලම් කරනවද?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="requestPlayAgain('ttt')" id="btn-ttt-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
+                <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">ලොබියට</button>
             </div>
-            <p id="ttt-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 10px;">⏳ ඉන්නවා...</p>
+            <p id="ttt-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ පාට්නර් කැමති වෙනකන් ඉන්නවා...</p>
         </div>
-        <button class="secondary hidden" id="btn-ttt-home" onclick="goLobby()" style="margin-top: 25px;"><i class="fas fa-home"></i> Home</button>
     </div>
 
     <!-- Memory Match -->
@@ -81,7 +81,16 @@
             <div>📱 Guest: <span id="mem-score-guest">0</span></div>
         </div>
         <div class="memory-grid" id="memory-grid"></div>
-        <button class="secondary hidden" id="btn-mem-home" onclick="goLobby()">Back to Lobby</button>
+        
+        <div id="mem-result-box" class="result-box hidden">
+            <h3 id="mem-result-text"></h3>
+            <p style="margin-bottom: 15px; color: #590d22; font-weight: bold;">ආයෙත් සෙල්ලම් කරනවද?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="requestPlayAgain('mem')" id="btn-mem-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
+                <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">ලොබියට</button>
+            </div>
+            <p id="mem-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ පාට්නර් කැමති වෙනකන් ඉන්නවා...</p>
+        </div>
     </div>
 
     <!-- Pictionary -->
@@ -110,8 +119,8 @@
 
     <div id="screen-battleship-wait" class="card hidden">
         <div class="result-box">
-            <h3>⏳ පොඩ්ඩක් ඉන්න...</h3>
-            <p>එයා බෝම්බ ටික හංගනකන් ඉන්න.</p>
+            <h3 id="battle-wait-h3">⏳ පොඩ්ඩක් ඉන්න...</h3>
+            <p id="battle-wait-p">එයා බෝම්බ ටික හංගනකන් ඉන්න.</p>
         </div>
     </div>
 
@@ -136,7 +145,16 @@
             <div>💣 පෑගුනා: <span id="play-b">0/3</span></div>
         </div>
         <div class="grid" id="play-grid"></div>
-        <button class="secondary hidden" id="btn-battle-home" onclick="goLobby()">Back to Lobby</button>
+        
+        <div id="battle-result-box" class="result-box hidden" style="margin-top: 15px;">
+            <h3 id="battle-result-text"></h3>
+            <p style="margin-bottom: 15px; color: #590d22; font-weight: bold;">ආයෙත් සෙල්ලම් කරනවද?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="requestPlayAgain('battle')" id="btn-battle-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
+                <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">ලොබියට</button>
+            </div>
+            <p id="battle-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ පාට්නර් කැමති වෙනකන් ඉන්නවා...</p>
+        </div>
     </div>
 
     <!-- Quiz -->
@@ -161,6 +179,7 @@
     <!-- Guess the Number -->
     <div id="screen-guess" class="card hidden">
         <h2>🔢 ඉලක්කම හොයමු</h2>
+        
         <div id="guess-setup" class="hidden">
             <p>ගේම් එකට අදාළ උපරිම ඉලක්කම තෝරන්න</p>
             <select id="guess-max-limit" style="padding: 12px; width: 85%; margin-bottom: 20px; border-radius: 15px; border: 2px solid #ffb3c6; text-align: center; font-size: 16px; font-weight: bold; color: #590d22; outline: none;">
@@ -171,19 +190,32 @@
             </select>
             <button onclick="startGameGuess()">ගේම් එක පටන්ගන්න</button>
         </div>
+        
         <div id="guess-pick-secret" class="hidden"></div>
+        
         <div id="guess-play" class="hidden">
             <p id="guess-instruction" style="font-weight: bold; font-size: 17px; color: #ff4d6d;">දැන් එයා හිතපු ඉලක්කම හොයමු!</p>
             <div id="guess-turn-indicator" class="turn-indicator"></div>
+            
             <div class="result-box" style="margin-top: 15px;">
                 <h3 id="guess-hint-text" style="color: #590d22; font-size: 18px;">ඔයාගේ ගෙස් එක ගහන්න 👇</h3>
                 <p id="partner-hint-text" style="color: #0077b6; font-size: 14px; margin-top: 10px; font-weight: bold;"></p>
             </div>
+            
             <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
                 <input type="number" id="guess-input" placeholder="ඉලක්කම..." style="width: 50%; margin-bottom: 0;">
                 <button id="btn-submit-guess" onclick="submitGuess()" style="width: 35%; margin: 0; padding: 10px;">Check</button>
             </div>
-            <button class="secondary hidden" id="btn-guess-home" onclick="goLobby()" style="margin-top: 25px;"><i class="fas fa-home"></i> Home</button>
+        </div>
+
+        <div id="guess-result-box" class="result-box hidden" style="margin-top: 15px;">
+            <h3 id="guess-result-text"></h3>
+            <p style="margin-bottom: 15px; color: #590d22; font-weight: bold;">ආයෙත් සෙල්ලම් කරනවද?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="requestPlayAgain('guess')" id="btn-guess-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
+                <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">ලොබියට</button>
+            </div>
+            <p id="guess-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ පාට්නර් කැමති වෙනකන් ඉන්නවා...</p>
         </div>
     </div>
 
@@ -197,26 +229,16 @@
         <p style="font-size: 15px; margin-bottom: 5px;">මේ ඉලක්කම ඉක්මනටම හොයන්න 👇</p>
         <div id="hunt-target-box" style="font-size: 45px; font-weight: 900; color: #c1121f; margin-bottom: 15px; background: #fff0f3; border-radius: 15px; padding: 10px; border: 3px dashed #ff4d6d;">--</div>
         <div class="hunt-grid" id="hunt-grid"></div>
-        <h3 id="hunt-winner-text" class="hidden" style="color: #2b9348; margin-top: 15px;"></h3>
-        <button class="secondary hidden" id="btn-hunt-home" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
-    </div>
-
-    <!-- Snakes and Ladders -->
-    <div id="screen-sl" class="card hidden">
-        <h2>🐍 නයා සහ ඉණිමඟ 🪜</h2>
-        <div class="stats" style="justify-content: center; gap: 20px; font-size: 15px;">
-            <div>🔴 මම: <span id="sl-pos-me">1</span></div>
-            <div>🔵 එයා: <span id="sl-pos-them">1</span></div>
-        </div>
-        <div id="sl-turn-indicator" class="turn-indicator"></div>
-        <div class="sl-grid" id="sl-grid"></div>
         
-        <div style="display: flex; flex-direction: column; align-items: center; margin-top: 15px;">
-            <div id="sl-dice-result" style="font-size: 40px; margin-bottom: 10px;">🎲</div>
-            <button id="btn-sl-roll" onclick="slRollDice()">දාදු කැටය දාන්න</button>
+        <div id="hunt-result-box" class="result-box hidden" style="margin-top: 15px;">
+            <h3 id="hunt-result-text"></h3>
+            <p style="margin-bottom: 15px; color: #590d22; font-weight: bold;">ආයෙත් සෙල්ලම් කරනවද?</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="requestPlayAgain('hunt')" id="btn-hunt-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
+                <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">ලොබියට</button>
+            </div>
+            <p id="hunt-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ පාට්නර් කැමති වෙනකන් ඉන්නවා...</p>
         </div>
-        <h3 id="sl-winner-text" class="hidden" style="color: #2b9348; margin-top: 15px;"></h3>
-        <button class="secondary hidden" id="btn-sl-home" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
     </div>
 
     <!-- JavaScript එක ලින්ක් කිරීම -->
