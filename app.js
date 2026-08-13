@@ -20,7 +20,7 @@ const db = getDatabase(app);
 let gameId = Math.floor(10000 + Math.random() * 90000).toString();
 let isHost = true;
 
-const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-setup', 'screen-battleship-play', 'screen-quiz', 'screen-memory'];
+const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-setup', 'screen-battleship-play', 'screen-quiz', 'screen-memory', 'screen-guess'];
 
 function showScreen(id) { 
     screens.forEach(s => document.getElementById(s).classList.add('hidden')); 
@@ -66,7 +66,8 @@ window.joinGame = function() {
     btn.innerText = 'Connecting...'; 
     btn.disabled = true;
 
-    const guestStatusRef = ref(db, `games/${enteredId}/status`);
+    const guestStatusRef = ref(db, `games/${enter
+onDisconnect(gameRef).remove(); // Clean up if host leavesedId}/status`);
     get(guestStatusRef).then(snap => {
         if (snap.exists() && snap.val() === 'waiting') {
             isHost = false;
@@ -119,6 +120,9 @@ function setupDataHandler() {
         else if(data.type === 'quiz-ans') { partnerQuizAns = data.ans; checkQuizResults(); }
         else if(data.type === 'start-memory') { if(!isHost) initMemoryMatch(data.board); }
         else if(data.type === 'memory-flip') processMemoryFlip(data.index);
+        else if(data.type === 'start-guess-setup') { if(!isHost) openGuessGuestWaiting(); }
+        else if(data.type === 'guess-init') { initGuessPlay(data.max, data.secret); }
+        else if(data.type === 'guess-submit') { processGuess(data.guess, data.senderTurn); }
     });
 
     const activeStatusRef = ref(db, `games/${gameId}/status`);
@@ -344,3 +348,108 @@ function checkQuizResults() {
 }
 
 window.nextQuizQ = function() { window.startQuiz(); }
+
+// --- 5. Guess the Number ---
+        let guessSecret = 0, guessMax = 100, guessTurn = 'host', isGuessGameOver = false;
+
+        window.openGuessSetup = function() {
+            sendData({type: 'start-guess-setup'});
+            if(isHost) {
+                showScreen('screen-guess');
+                document.getElementById('guess-setup').classList.remove('hidden');
+                document.getElementById('guess-waiting').classList.add('hidden');
+                document.getElementById('guess-play').classList.add('hidden');
+            } else {
+                openGuessGuestWaiting();
+            }
+        }
+
+        window.openGuessGuestWaiting = function() {
+            showScreen('screen-guess');
+            document.getElementById('guess-setup').classList.add('hidden');
+            document.getElementById('guess-waiting').classList.remove('hidden');
+            document.getElementById('guess-play').classList.add('hidden');
+        }
+
+        window.startGameGuess = function() {
+            guessMax = parseInt(document.getElementById('guess-max-limit').value);
+            // සිස්ටම් එක රහස් ඉලක්කම හිතනවා
+            guessSecret = Math.floor(Math.random() * guessMax) + 1;
+            sendData({type: 'guess-init', max: guessMax, secret: guessSecret});
+            initGuessPlay(guessMax, guessSecret);
+        }
+
+        function initGuessPlay(max, secret) {
+            guessMax = max;
+            guessSecret = secret;
+            guessTurn = 'host';
+            isGuessGameOver = false;
+            
+            showScreen('screen-guess');
+            document.getElementById('guess-setup').classList.add('hidden');
+            document.getElementById('guess-waiting').classList.add('hidden');
+            document.getElementById('guess-play').classList.remove('hidden');
+            
+            document.getElementById('guess-instruction').innerText = `1 ඉඳන් ${max} ට අඩු ඉලක්කමක් මම හිතුවා! 🤫`;
+            document.getElementById('guess-hint-text').innerHTML = "මුලින්ම ගෙස් කරන්න පටන්ගමු 👇";
+            document.getElementById('guess-hint-text').style.color = "#590d22";
+            document.getElementById('guess-input').value = '';
+            document.getElementById('btn-guess-home').classList.add('hidden');
+            
+            updateGuessUI();
+        }
+
+        window.submitGuess = function() {
+            let amI = isHost ? 'host' : 'guest';
+            if(guessTurn !== amI || isGuessGameOver) return showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
+            
+            let myGuess = parseInt(document.getElementById('guess-input').value);
+            if(isNaN(myGuess) || myGuess < 1 || myGuess > guessMax) return showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
+            
+            sendData({type: 'guess-submit', guess: myGuess, senderTurn: amI});
+            processGuess(myGuess, amI);
+            document.getElementById('guess-input').value = '';
+        }
+
+        function processGuess(guess, player) {
+            let hintText = document.getElementById('guess-hint-text');
+            let who = (player === (isHost ? 'host' : 'guest')) ? "ඔයා" : "එයා";
+            
+            if(guess === guessSecret) {
+                hintText.innerHTML = `🎉 සුපිරි! <b>${who}</b> හරි ඉලක්කම හොයාගත්තා! <br><br> රහස් ඉලක්කම: ${guessSecret}`;
+                hintText.style.color = "#2b9348";
+                isGuessGameOver = true;
+                document.getElementById('btn-guess-home').classList.remove('hidden');
+                document.getElementById('guess-turn-indicator').innerText = `🏆 ගේම් ඉවරයි! ${who} දිනුම්!`;
+                document.getElementById('guess-turn-indicator').className = "turn-indicator my-turn";
+                document.getElementById('btn-submit-guess').disabled = true;
+                showToast("දිනුම්! 🎯");
+            } else {
+                if(guess < guessSecret) {
+                    hintText.innerHTML = `⬆️ <b>${guess}</b> ට වඩා වැඩියි! <br><span style="font-size:14px;color:#800f2f;">(${who}ගේ ගෙස් එක)</span>`;
+                    hintText.style.color = "#0077b6";
+                } else {
+                    hintText.innerHTML = `⬇️ <b>${guess}</b> ට වඩා අඩුයි! <br><span style="font-size:14px;color:#800f2f;">(${who}ගේ ගෙස් එක)</span>`;
+                    hintText.style.color = "#c1121f";
+                }
+                // වාරය මාරු කිරීම
+                guessTurn = guessTurn === 'host' ? 'guest' : 'host';
+                updateGuessUI();
+            }
+        }
+
+        function updateGuessUI() {
+            if(isGuessGameOver) return;
+            let amI = isHost ? 'host' : 'guest';
+            let ind = document.getElementById('guess-turn-indicator');
+            
+            if(guessTurn === amI) {
+                ind.innerText = "👉 දැන් ඔයාගේ වාරේ (ගෙස් කරන්න)";
+                ind.className = "turn-indicator my-turn";
+                document.getElementById('btn-submit-guess').disabled = false;
+            } else {
+                ind.innerText = "⏳ දැන් එයාගේ වාරේ...";
+                ind.className = "turn-indicator their-turn";
+                document.getElementById('btn-submit-guess').disabled = true;
+            }
+        }
