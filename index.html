@@ -25,8 +25,8 @@
         <p id="conn-status" style="color: #ff9f1c; font-size: 12px;">Firebase Server Connecting...</p>
         
         <div style="margin-top: 30px;">
-            <h3>Game එක හදන්න (Host)</h3>
-            <p>ඔයාගේ code එක Partner ට යවන්න</p>
+            <h3>Game එක හදන්න</h3>
+            <p>ඔයාගේ code එක <span class="partner-name-label">එයා</span>ට යවන්න</p>
             <div class="id-box" id="my-id">...</div>
         </div>
         
@@ -34,7 +34,7 @@
         
         <div>
             <h3>Game එකට join වෙන්න</h3>
-            <p>Partner එවපු code එක මෙතන ගහන්න</p>
+            <p><span class="partner-name-label">එයා</span> එවපු code එක මෙතන ගහන්න</p>
             <input type="number" id="join-id" placeholder="කෝඩ් එක (උදා: 12345)" maxlength="5">
             <button id="join-btn" onclick="joinGame()"><i class="fas fa-heart"></i> Join Game</button>
         </div>
@@ -44,7 +44,7 @@
     <div id="screen-lobby" class="card hidden">
         <h1>🎮 Game Lobby</h1>
         <div id="lobby-content">
-            <p>Partner connect වුණා! Game එකක් තෝරන්න.</p>
+            <p><span class="partner-name-label">එයා</span> connect වුණා! Game එකක් තෝරන්න.</p>
             <button onclick="startTicTacToe()">❌❤️ Hearts & Crosses</button>
             <button onclick="startMemoryMatch()">🃏 Memory Match</button>
             <button onclick="startQuiz()">🤔 Couple Quiz</button>
@@ -68,7 +68,7 @@
                 <button onclick="requestPlayAgain('ttt')" id="btn-ttt-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
                 <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">Home</button>
             </div>
-            <p id="ttt-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ Partner කැමති වෙනකන් ඉන්න...</p>
+            <p id="ttt-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ ඉන්න...</p>
         </div>
         <button class="secondary" onclick="goLobby()" style="margin-top: 25px;"><i class="fas fa-home"></i> Home</button>
     </div>
@@ -78,8 +78,8 @@
         <h2>🃏 Memory Match</h2>
         <div id="mem-turn-indicator" class="turn-indicator"></div>
         <div class="stats" style="font-size: 14px;">
-            <div>🧑‍💻 Host: <span id="mem-score-host">0</span></div>
-            <div>📱 Guest: <span id="mem-score-guest">0</span></div>
+            <div>🧑‍💻 <span class="my-name-label">මම</span>: <span id="score-me-mem">0</span></div>
+            <div>📱 <span class="partner-name-label">එයා</span>: <span id="score-them-mem">0</span></div>
         </div>
         <div class="memory-grid" id="memory-grid"></div>
         
@@ -90,7 +90,7 @@
                 <button onclick="requestPlayAgain('mem')" id="btn-mem-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
                 <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">Home</button>
             </div>
-            <p id="mem-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ Partner කැමති වෙනකන් ඉන්න...</p>
+            <p id="mem-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ ඉන්න...</p>
         </div>
         <button class="secondary" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
     </div>
@@ -114,15 +114,15 @@
     <div id="screen-battleship-role" class="card hidden">
         <h2>❤️‍🔥 Heart Battleship</h2>
         <p style="margin-bottom: 20px;">කවුද මුලින්ම බෝම්බයි හදවත් ටිකයි හංගන්නේ?</p>
-        <button onclick="selectBattleRole('me')">🙋‍♂️ මම හංගනවා</button>
-        <button onclick="selectBattleRole('them')">👉 එයා හංගනවා</button>
+        <button onclick="selectBattleRole('me')">🙋‍♂️ <span class="my-name-label">මම</span> හංගනවා</button>
+        <button onclick="selectBattleRole('them')">👉 <span class="partner-name-label">එයා</span> හංගනවා</button>
         <button class="secondary" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
     </div>
 
     <div id="screen-battleship-wait" class="card hidden">
         <div class="result-box">
             <h3 id="battle-wait-h3">⏳ පොඩ්ඩක් ඉන්න...</h3>
-            <p id="battle-wait-p">එයා බෝම්බ ටික හංගනකන් ඉන්න.</p>
+            <p id="battle-wait-p"><span class="partner-name-label">එයා</span> බෝම්බ ටික හංගනකන් ඉන්න.</p>
         </div>
         <button class="secondary" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
     </div>
@@ -157,7 +157,7 @@
                 <button onclick="requestPlayAgain('battle')" id="btn-battle-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
                 <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">Home</button>
             </div>
-            <p id="battle-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ Partner කැමති වෙනකන් ඉන්න...</p>
+            <p id="battle-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ ඉන්න...</p>
         </div>
         <button class="secondary" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
     </div>
@@ -168,8 +168,8 @@
         <div id="quiz-question-container">
             <h3 id="quiz-q-text"></h3>
             <div class="quiz-btns">
-                <button onclick="submitQuizAns('me')">🙋‍♂️ මම</button>
-                <button onclick="submitQuizAns('them')">👉 එයා</button>
+                <button onclick="submitQuizAns('me')">🙋‍♂️ <span class="my-name-label">මම</span></button>
+                <button onclick="submitQuizAns('them')">👉 <span class="partner-name-label">එයා</span></button>
             </div>
         </div>
         <div id="quiz-waiting" class="hidden"><div class="result-box"><h3>⏳ පොඩ්ඩක් ඉන්න...</h3></div></div>
@@ -199,7 +199,7 @@
         <div id="guess-pick-secret" class="hidden"></div>
         
         <div id="guess-play" class="hidden">
-            <p id="guess-instruction" style="font-weight: bold; font-size: 17px; color: #ff4d6d;">දැන් එයා හිතපු ඉලක්කම හොයමු!</p>
+            <p id="guess-instruction" style="font-weight: bold; font-size: 17px; color: #ff4d6d;">දැන් <span class="partner-name-label">එයා</span> හිතපු ඉලක්කම හොයමු!</p>
             <div id="guess-turn-indicator" class="turn-indicator"></div>
             
             <div class="result-box" style="margin-top: 15px;">
@@ -220,7 +220,7 @@
                 <button onclick="requestPlayAgain('guess')" id="btn-guess-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
                 <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">Home</button>
             </div>
-            <p id="guess-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ Partner කැමති වෙනකන් ඉන්න...</p>
+            <p id="guess-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ ඉන්න...</p>
         </div>
         <button class="secondary" onclick="goLobby()" style="margin-top: 25px;"><i class="fas fa-home"></i> Home</button>
     </div>
@@ -229,8 +229,8 @@
     <div id="screen-hunt" class="card hidden">
         <h2>🎯 Speed Number Hunt</h2>
         <div class="stats">
-            <div>🧑‍💻 Host: <span id="hunt-score-host">0</span></div>
-            <div>📱 Guest: <span id="hunt-score-guest">0</span></div>
+            <div>🧑‍💻 <span class="my-name-label">මම</span>: <span id="score-me-hunt">0</span></div>
+            <div>📱 <span class="partner-name-label">එයා</span>: <span id="score-them-hunt">0</span></div>
         </div>
         <p style="font-size: 15px; margin-bottom: 5px;">මේ ඉලක්කම ඉක්මනටම හොයන්න 👇</p>
         <div id="hunt-target-box" style="font-size: 45px; font-weight: 900; color: #c1121f; margin-bottom: 15px; background: #fff0f3; border-radius: 15px; padding: 10px; border: 3px dashed #ff4d6d;">--</div>
@@ -243,7 +243,7 @@
                 <button onclick="requestPlayAgain('hunt')" id="btn-hunt-yes" style="width: 45%; margin: 0; padding: 10px;">ඔව්</button>
                 <button class="secondary" onclick="goLobby()" style="width: 45%; margin: 0; padding: 10px;">Home</button>
             </div>
-            <p id="hunt-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ Partner කැමති වෙනකන් ඉන්න...</p>
+            <p id="hunt-wait-text" class="hidden" style="color: #0077b6; font-size: 14px; margin-top: 15px; font-weight: bold;">⏳ ඉන්න...</p>
         </div>
         <button class="secondary" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
     </div>
