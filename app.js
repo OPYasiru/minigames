@@ -19,7 +19,7 @@ const db = getDatabase(app);
 let gameId = Math.floor(10000 + Math.random() * 90000).toString();
 let isHost = true;
 
-const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-setup', 'screen-battleship-play', 'screen-quiz', 'screen-memory', 'screen-guess', 'screen-tictactoe'];
+const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-role', 'screen-battleship-setup', 'screen-battleship-wait', 'screen-battleship-play', 'screen-quiz', 'screen-memory', 'screen-guess', 'screen-tictactoe', 'screen-hunt', 'screen-sl'];
 
 function showScreen(id) { 
     screens.forEach(s => document.getElementById(s).classList.add('hidden')); 
@@ -107,28 +107,36 @@ function setupDataHandler() {
         else if(data.type === 'start-pic') initPictionary();
         else if(data.type === 'draw') drawLine(data.x0, data.y0, data.x1, data.y1, data.color, false);
         else if(data.type === 'clear-pic') ctx.clearRect(0, 0, canvas.width, canvas.height);
-        else if(data.type === 'start-battle') { if(!isHost) initBattleshipGuest(); }
-        else if(data.type === 'battle-ready') { battleData = data.data; initBattleshipPlayGrid(); }
-        else if(data.type === 'battle-click') processBattleClick(data.index);
+        
         else if(data.type === 'start-quiz') initQuiz(data.qIndex);
         else if(data.type === 'quiz-ans') { partnerQuizAns = data.ans; checkQuizResults(); }
-        else if(data.type === 'start-memory') { if(!isHost) initMemoryMatch(data.board); }
+        else if(data.type === 'start-memory') { if(!isHost) initMemoryMatch(data.board, data.turn); }
         else if(data.type === 'memory-flip') processMemoryFlip(data.index);
         
-        // Guess the Number
+        else if(data.type === 'battle-role') { setBattleRoleFromPartner(data.hider); }
+        else if(data.type === 'battle-ready') { battleData = data.data; initBattleshipPlayGrid(); }
+        else if(data.type === 'battle-click') processBattleClick(data.index);
+        
         else if(data.type === 'start-guess-setup') { if(!isHost) window.openGuessGuestWaiting(); }
-        else if(data.type === 'guess-range') { initPickSecret(data.max); }
+        else if(data.type === 'guess-range') { initPickSecret(data.max, data.turn); }
         else if(data.type === 'guess-secret') { partnerSecret = data.secret; checkBothSecrets(); }
         else if(data.type === 'guess-try') { processPartnerGuess(data.guess); }
         else if(data.type === 'guess-win') { handleWin(isHost ? 'guest' : 'host'); }
 
-        // Tic Tac Toe
-        else if(data.type === 'start-ttt') { if(!isHost) initTicTacToe(); }
+        else if(data.type === 'start-ttt') { if(!isHost) initTicTacToe(data.turn); }
         else if(data.type === 'ttt-move') { processTttMove(data.index); }
         else if(data.type === 'ttt-ready') {
             if(isHost) tttGuestReady = true; else tttHostReady = true;
             checkTttRestart();
         }
+
+        // New Games Data Handlers
+        else if(data.type === 'start-hunt') { initHuntBoard(data.board, data.target, data.scoreH, data.scoreG); }
+        else if(data.type === 'hunt-click') { handlePartnerHuntClick(data.num); }
+        else if(data.type === 'hunt-next') { initHuntBoard(data.board, data.target, data.scoreH, data.scoreG); }
+
+        else if(data.type === 'start-sl') { initSnakesLadders(data.turn); }
+        else if(data.type === 'sl-move') { processSlMove(data.player, data.dice, data.newPos, data.snake, data.ladder); }
     });
 
     const activeStatusRef = ref(db, `games/${gameId}/status`);
@@ -142,132 +150,6 @@ function setupDataHandler() {
 
 window.goLobby = function() { showScreen('screen-lobby'); sendData({type: 'go-lobby'}); }
 
-// --- 6. Tic Tac Toe (❤️ & ❌) ---
-let tttBoard = Array(9).fill(null);
-let tttTurn = 'host';
-let tttGameOver = false;
-let tttHostReady = false;
-let tttGuestReady = false;
-
-const winPatterns = [
-    [0,1,2], [3,4,5], [6,7,8], // rows
-    [0,3,6], [1,4,7], [2,5,8], // cols
-    [0,4,8], [2,4,6]           // diagonals
-];
-
-window.startTicTacToe = function() {
-    sendData({type: 'start-ttt'});
-    initTicTacToe();
-}
-
-function initTicTacToe() {
-    tttBoard = Array(9).fill(null);
-    tttTurn = 'host'; 
-    tttGameOver = false;
-    tttHostReady = false;
-    tttGuestReady = false;
-    
-    showScreen('screen-tictactoe');
-    document.getElementById('ttt-result-box').classList.add('hidden');
-    document.getElementById('ttt-wait-text').classList.add('hidden');
-    document.getElementById('btn-ttt-yes').disabled = false;
-    document.getElementById('btn-ttt-home').classList.add('hidden');
-    
-    const grid = document.getElementById('ttt-grid');
-    grid.innerHTML = '';
-    for(let i=0; i<9; i++) {
-        let cell = document.createElement('div');
-        cell.className = 'ttt-cell';
-        cell.id = `ttt-cell-${i}`;
-        cell.onclick = () => handleTttClick(i);
-        grid.appendChild(cell);
-    }
-    updateTttUI();
-}
-
-function handleTttClick(i) {
-    if(tttGameOver || tttBoard[i] !== null) return;
-    let amI = isHost ? 'host' : 'guest';
-    if(tttTurn !== amI) return window.showToast("දැන් එයාගේ වාරේ!");
-    
-    sendData({type: 'ttt-move', index: i});
-    processTttMove(i);
-}
-
-function processTttMove(i) {
-    tttBoard[i] = tttTurn; 
-    let cell = document.getElementById(`ttt-cell-${i}`);
-    cell.innerText = tttTurn === 'host' ? '❌' : '❤️';
-    cell.classList.add('taken');
-    
-    if (checkTttWin(tttTurn)) {
-        tttGameOver = true;
-        handleTttEnd(tttTurn === (isHost ? 'host' : 'guest') ? 'win' : 'lose', tttTurn);
-    } else if (!tttBoard.includes(null)) {
-        tttGameOver = true;
-        handleTttEnd('draw', null);
-    } else {
-        tttTurn = tttTurn === 'host' ? 'guest' : 'host';
-        updateTttUI();
-    }
-}
-
-function checkTttWin(player) {
-    for(let pattern of winPatterns) {
-        const [a,b,c] = pattern;
-        if(tttBoard[a] === player && tttBoard[b] === player && tttBoard[c] === player) {
-            document.getElementById(`ttt-cell-${a}`).classList.add('win-cell');
-            document.getElementById(`ttt-cell-${b}`).classList.add('win-cell');
-            document.getElementById(`ttt-cell-${c}`).classList.add('win-cell');
-            return true;
-        }
-    }
-    return false;
-}
-
-function handleTttEnd(result, winner) {
-    let text = "";
-    if(result === 'win') text = "🎉 සුපිරි! ඔයා දිනුම්!";
-    else if(result === 'lose') text = "😢 අඩේ! එයා දිනුම්!";
-    else text = "🤝 තරඟය සමයි! (Draw)";
-    
-    document.getElementById('ttt-result-text').innerText = text;
-    document.getElementById('ttt-result-text').style.color = result === 'win' ? '#2b9348' : (result === 'lose' ? '#c1121f' : '#0077b6');
-    document.getElementById('ttt-result-box').classList.remove('hidden');
-    document.getElementById('ttt-turn-indicator').innerText = "🏆 ගේම් ඉවරයි!";
-    document.getElementById('ttt-turn-indicator').className = "turn-indicator my-turn";
-}
-
-window.tttPlayAgain = function() {
-    document.getElementById('btn-ttt-yes').disabled = true;
-    document.getElementById('ttt-wait-text').classList.remove('hidden');
-    
-    if(isHost) tttHostReady = true; else tttGuestReady = true;
-    sendData({type: 'ttt-ready'});
-    
-    checkTttRestart();
-}
-
-function checkTttRestart() {
-    if(tttHostReady && tttGuestReady) {
-        initTicTacToe(); 
-    }
-}
-
-function updateTttUI() {
-    if(tttGameOver) return;
-    let amI = isHost ? 'host' : 'guest';
-    let ind = document.getElementById('ttt-turn-indicator');
-    
-    if(tttTurn === amI) {
-        ind.innerText = `👉 දැන් ඔයාගේ වාරේ (${isHost ? '❌' : '❤️'})`;
-        ind.className = "turn-indicator my-turn";
-    } else {
-        ind.innerText = `⏳ දැන් එයාගේ වාරේ (${!isHost ? '❌' : '❤️'})...`;
-        ind.className = "turn-indicator their-turn";
-    }
-}
-
 // --- 1. Memory Match Game ---
 const memoryEmojis = ['🐶', '🍕', '🚀', '🌻', '🎈', '🧸', '💎', '🍓'];
 let memoryBoard = [], flippedCards = [], matchedCards = [];
@@ -276,15 +158,17 @@ let memoryTurn = 'host', scoreHost = 0, scoreGuest = 0, lockBoard = false;
 window.startMemoryMatch = function() {
     if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
     memoryBoard = [...memoryEmojis, ...memoryEmojis].sort(() => Math.random() - 0.5);
-    sendData({type: 'start-memory', board: memoryBoard});
-    initMemoryMatch(memoryBoard);
+    memoryTurn = Math.random() < 0.5 ? 'host' : 'guest';
+    sendData({type: 'start-memory', board: memoryBoard, turn: memoryTurn});
+    initMemoryMatch(memoryBoard, memoryTurn);
 }
 
-function initMemoryMatch(board) {
+function initMemoryMatch(board, turn) {
     memoryBoard = board;
+    memoryTurn = turn;
     flippedCards = []; matchedCards = [];
     scoreHost = 0; scoreGuest = 0;
-    memoryTurn = 'host'; lockBoard = false;
+    lockBoard = false;
     showScreen('screen-memory');
     
     const grid = document.getElementById('memory-grid');
@@ -382,20 +266,183 @@ canvas.addEventListener('mousedown', onDown); canvas.addEventListener('mousemove
 canvas.addEventListener('touchstart', onDown, {passive: false}); canvas.addEventListener('touchmove', onMove, {passive: false}); canvas.addEventListener('touchend', onUp);
 window.clearCanvasSync = function() { ctx.clearRect(0, 0, canvas.width, canvas.height); sendData({type: 'clear-pic'}); }
 
-// --- 3. Battleship ---
-let battleState = { h: [], t: [] }, battleData = { h: [], t: [] }, playStats = { hearts: 0, tries: 7, done: false };
-window.startBattleship = function() { sendData({type: 'start-battle'}); initBattleshipHost(); }
-function initBattleshipHost() { showScreen('screen-battleship-setup'); battleState = { h: [], t: [] }; updateSetupUI(); const grid = document.getElementById('setup-grid'); grid.innerHTML = ''; for(let i=0; i<25; i++) { let cell = document.createElement('div'); cell.className = 'cell'; cell.onclick = () => setupCellClick(cell, i); grid.appendChild(cell); } }
-function setupCellClick(cell, i) { if(battleState.h.includes(i)) { battleState.h = battleState.h.filter(x => x !== i); cell.classList.remove('heart-selected'); cell.innerHTML = ''; } else if(battleState.t.includes(i)) { battleState.t = battleState.t.filter(x => x !== i); cell.classList.remove('trap-selected'); cell.innerHTML = ''; } else { if(battleState.h.length < 3) { battleState.h.push(i); cell.classList.add('heart-selected'); cell.innerHTML = '❤️'; } else if(battleState.t.length < 3) { battleState.t.push(i); cell.classList.add('trap-selected'); cell.innerHTML = '💣'; } } updateSetupUI(); }
-function updateSetupUI() { document.getElementById('setup-h').innerText = 3 - battleState.h.length; document.getElementById('setup-t').innerText = 3 - battleState.t.length; document.getElementById('btn-start-battle').style.display = (battleState.h.length === 3 && battleState.t.length === 3) ? 'block' : 'none'; }
-window.sendBattleshipReady = function() { sendData({type: 'battle-ready', data: battleState}); battleData = battleState; showScreen('screen-battleship-play'); document.getElementById('battle-instructions').innerText = 'එයා හොයනකන් බලාගෙන ඉන්න...'; initBattleshipPlayGrid(true); }
-function initBattleshipGuest() { showScreen('screen-lobby'); document.getElementById('lobby-content').innerHTML = '<h3>හංගනකන් ඉන්න... 🤫</h3>'; }
-function initBattleshipPlayGrid(isViewer = false) { if(!isViewer) { showScreen('screen-battleship-play'); document.getElementById('battle-instructions').innerText = 'හදවත් 3ක් හොයාගන්න! බෝම්බත් තියෙනවා!'; } document.getElementById('btn-battle-home').classList.add('hidden'); playStats = { hearts: 0, tries: 7, done: false }; updatePlayUI(); const grid = document.getElementById('play-grid'); grid.innerHTML = ''; for(let i=0; i<25; i++) { let cell = document.createElement('div'); cell.className = 'cell'; cell.id = `bcell-${i}`; if(!isViewer) { cell.onclick = () => { if(playStats.done) return; sendData({type: 'battle-click', index: i}); processBattleClick(i); }; } grid.appendChild(cell); } }
-function processBattleClick(i) { if(playStats.done) return; const cell = document.getElementById(`bcell-${i}`); if(cell.innerHTML !== '') return; playStats.tries--; if(battleData.h.includes(i)) { cell.classList.add('revealed-heart'); cell.innerHTML = '❤️'; playStats.hearts++; window.showToast('නියමයි! ❤️ එකක් හම්බුනා!'); } else if(battleData.t.includes(i)) { cell.classList.add('revealed-trap'); cell.innerHTML = '💣'; window.showToast('අයියෝ! බෝම්බෙකට අහු වුණා!'); } else { cell.classList.add('revealed-empty'); cell.innerHTML = '☁️'; } updatePlayUI(); checkWinLoss(); }
-function updatePlayUI() { document.getElementById('play-h').innerText = `${playStats.hearts}/3`; document.getElementById('play-c').innerText = playStats.tries; }
-function checkWinLoss() { if(playStats.hearts === 3) { playStats.done = true; document.getElementById('battle-instructions').innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; window.showToast('දෙන්නා දිනුම්! ❤️'); document.getElementById('btn-battle-home').classList.remove('hidden'); } else if(playStats.tries === 0) { playStats.done = true; document.getElementById('battle-instructions').innerText = '😢 චාන්ස් ඉවරයි! ඔයා පැරදුනා.'; window.showToast('ගේම් ඕවර්! 💔'); battleData.h.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c.innerHTML === '') c.innerHTML = '❤️'; }); document.getElementById('btn-battle-home').classList.remove('hidden'); } }
+// --- 3. Battleship (හදවත් යුද්ධය - New Logic) ---
+let battleState = { h: [], t: [] }, battleData = { h: [], t: [] }, playStats = { hearts: 0, bombs: 0, done: false };
+let battleHider = null, battleSeeker = null;
 
-// --- 4. Quiz (No Duplicates) ---
+window.startBattleshipRole = function() {
+    showScreen('screen-battleship-role');
+}
+
+window.selectBattleRole = function(who) {
+    let amI = isHost ? 'host' : 'guest';
+    battleHider = (who === 'me') ? amI : (isHost ? 'guest' : 'host');
+    battleSeeker = (battleHider === 'host') ? 'guest' : 'host';
+    
+    sendData({type: 'battle-role', hider: battleHider});
+    
+    if(battleHider === amI) {
+        initBattleshipSetup();
+    } else {
+        showScreen('screen-battleship-wait');
+    }
+}
+
+function setBattleRoleFromPartner(hider) {
+    battleHider = hider;
+    battleSeeker = (battleHider === 'host') ? 'guest' : 'host';
+    let amI = isHost ? 'host' : 'guest';
+    
+    if(battleHider === amI) {
+        initBattleshipSetup();
+    } else {
+        showScreen('screen-battleship-wait');
+    }
+}
+
+function initBattleshipSetup() { 
+    showScreen('screen-battleship-setup'); 
+    battleState = { h: [], t: [] }; 
+    updateSetupUI(); 
+    const grid = document.getElementById('setup-grid'); 
+    grid.innerHTML = ''; 
+    for(let i=0; i<25; i++) { 
+        let cell = document.createElement('div'); 
+        cell.className = 'cell'; 
+        cell.onclick = () => setupCellClick(cell, i); 
+        grid.appendChild(cell); 
+    } 
+}
+
+function setupCellClick(cell, i) { 
+    if(battleState.h.includes(i)) { 
+        battleState.h = battleState.h.filter(x => x !== i); 
+        cell.classList.remove('heart-selected'); 
+        cell.innerHTML = ''; 
+    } else if(battleState.t.includes(i)) { 
+        battleState.t = battleState.t.filter(x => x !== i); 
+        cell.classList.remove('trap-selected'); 
+        cell.innerHTML = ''; 
+    } else { 
+        if(battleState.h.length < 5) { 
+            battleState.h.push(i); 
+            cell.classList.add('heart-selected'); 
+            cell.innerHTML = '❤️'; 
+        } else if(battleState.t.length < 5) { 
+            battleState.t.push(i); 
+            cell.classList.add('trap-selected'); 
+            cell.innerHTML = '💣'; 
+        } 
+    } 
+    updateSetupUI(); 
+}
+
+function updateSetupUI() { 
+    document.getElementById('setup-h').innerText = 5 - battleState.h.length; 
+    document.getElementById('setup-t').innerText = 5 - battleState.t.length; 
+    document.getElementById('btn-start-battle').style.display = (battleState.h.length === 5 && battleState.t.length === 5) ? 'block' : 'none'; 
+}
+
+window.sendBattleshipReady = function() { 
+    sendData({type: 'battle-ready', data: battleState}); 
+    battleData = battleState; 
+    showScreen('screen-battleship-wait');
+    document.querySelector('#screen-battleship-wait h3').innerText = "හංගලා ඉවරයි!";
+    document.querySelector('#screen-battleship-wait p').innerText = "එයා හොයනකන් බලාගෙන ඉන්න..."; 
+}
+
+function initBattleshipPlayGrid() { 
+    let amI = isHost ? 'host' : 'guest';
+    if(battleSeeker === amI) {
+        showScreen('screen-battleship-play'); 
+    }
+    
+    document.getElementById('btn-battle-home').classList.add('hidden'); 
+    playStats = { hearts: 0, bombs: 0, done: false }; 
+    updatePlayUI(); 
+    
+    const grid = document.getElementById('play-grid'); 
+    grid.innerHTML = ''; 
+    for(let i=0; i<25; i++) { 
+        let cell = document.createElement('div'); 
+        cell.className = 'cell'; 
+        cell.id = `bcell-${i}`; 
+        if(battleSeeker === amI) { 
+            cell.onclick = () => { 
+                if(playStats.done) return; 
+                sendData({type: 'battle-click', index: i}); 
+                processBattleClick(i); 
+            }; 
+        } 
+        grid.appendChild(cell); 
+    } 
+}
+
+function processBattleClick(i) { 
+    if(playStats.done) return; 
+    const cell = document.getElementById(`bcell-${i}`); 
+    if(cell.innerHTML !== '') return; 
+    
+    if(battleData.h.includes(i)) { 
+        cell.classList.add('revealed-heart'); 
+        cell.innerHTML = '❤️'; 
+        playStats.hearts++; 
+    } else if(battleData.t.includes(i)) { 
+        cell.classList.add('revealed-trap'); 
+        cell.innerHTML = '💣'; 
+        playStats.bombs++;
+    } else { 
+        cell.classList.add('revealed-empty'); 
+        cell.innerHTML = '☁️'; 
+    } 
+    updatePlayUI(); 
+    checkWinLoss(); 
+}
+
+function updatePlayUI() { 
+    document.getElementById('play-h').innerText = `${playStats.hearts}/3`; 
+    document.getElementById('play-b').innerText = `${playStats.bombs}/3`; 
+}
+
+function checkWinLoss() { 
+    let amI = isHost ? 'host' : 'guest';
+    let inst = document.getElementById('battle-instructions');
+    
+    if(playStats.hearts === 3) { 
+        playStats.done = true; 
+        if(battleSeeker === amI) {
+            inst.innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; 
+            window.showToast('ඔයා දිනුම්! ❤️'); 
+        } else {
+            document.querySelector('#screen-battleship-wait h3').innerText = "අයියෝ!";
+            document.querySelector('#screen-battleship-wait p').innerText = "එයා දිනුම්. ඔයාගේ හදවත් ටික හොයාගත්තා."; 
+        }
+        showRemaining();
+    } else if(playStats.bombs === 3) { 
+        playStats.done = true; 
+        if(battleSeeker === amI) {
+            inst.innerText = '😢 බෝම්බ පෑගුනා! ඔයා පැරදුනා.'; 
+            window.showToast('ගේම් ඕවර්! 💔'); 
+        } else {
+            document.querySelector('#screen-battleship-wait h3').innerText = "🎉 නියමයි!";
+            document.querySelector('#screen-battleship-wait p').innerText = "එයා බෝම්බ වලට අහු වුණා. ඔයා දිනුම්!"; 
+        }
+        showRemaining();
+    } 
+}
+
+function showRemaining() {
+    document.getElementById('btn-battle-home').classList.remove('hidden'); 
+    battleData.h.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c && c.innerHTML === '') c.innerHTML = '❤️'; }); 
+    battleData.t.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c && c.innerHTML === '') c.innerHTML = '💣'; });
+    
+    let amI = isHost ? 'host' : 'guest';
+    if(battleHider === amI) {
+        setTimeout(() => { document.getElementById('btn-battle-home').click(); }, 3000); // 3s wait for hider to read toast and go back
+    }
+}
+
+// --- 4. Quiz ---
 const quizQuestions = [
     "කවුද වැඩියෙන්ම කේන්ති ගන්නේ? 😡", "කවුද වැඩියෙන්ම කන්න පෙරේත? 🍕", "කවුද මුලින්ම 'ආදරෙයි' කිව්වේ? ❤️",
     "කවුද මුලින්ම යාළු වෙන්න ඇහුවේ? 😍", "කවුද වැඩියෙන්ම නිදාගන්නේ? 😴", "කවුද වැඩියෙන්ම සල්ලි වියදම් කරන්නේ? 💸",
@@ -406,14 +453,7 @@ const quizQuestions = [
     "කවුද රහස් රකින්න වැඩියෙන්ම දක්ෂ? 🤫", "නානකාමරේ වැඩියෙන්ම සිංදු කියන්නේ කවුද? 🚿", "කවුද වැඩියෙන්ම ට්‍රිප් යන්න ආස? 🚗",
     "කවුද වැඩියෙන්ම කම්මැලි? 🥱", "කවුද ඉක්මනටම ලෙඩ වෙන්නේ? 🤒", "කවුද ගොඩක් වෙලා කණ්ණාඩිය ඉස්සරහ ඉන්නේ? 🪞",
     "කවුද වැඩියෙන්ම ෂොපින් යන්න ආස? 🛍️", "කවුද වැඩියෙන්ම කතා කරන්නේ (වෙහෙසක් නැතුව)? 🗣️", "කවුද වැඩියෙන්ම කෝපි/තේ බොන්නේ? ☕",
-    "කවුද ගෙදර වැඩ වලට වැඩියෙන්ම උදව් කරන්නේ? 🧹", "කවුද වැඩියෙන්ම ළමයින්ට ආදරේ? 👶", "කවුද සත්තුන්ට වැඩියෙන්ම ආදරේ? 🐶",
-    "කවුද වැඩියෙන්ම ජෝක්ස් කරන්නේ? 😂", "කවුද ඉක්මනටම බය වෙන්නේ? 👻", "කවුද ගොඩක්ම පිරිසිදුවට ඉන්න ආස? 🧼",
-    "කවුද රෑට ගෙරවන්නේ? 💤", "කවුද මුලින්ම මැසේජ් කරන්නේ/රිප්ලයි කරන්නේ? 💬", "කවුද වැඩියෙන්ම චොකලට්/පැණිරස කන්න ආස? 🍫",
-    "කවුද වැඩියෙන්ම ගේම්ස් ගහන්නේ? 🎮", "කවුද වැඩියෙන්ම ටික්ටොක්/යූටියුබ් බලන්නේ? 🎬", "කවුද පොඩි දේටත් ඉක්මනටම අඬන්නේ? 😢",
-    "කවුද වැඩියෙන්ම ඊර්ෂ්‍යා කරන්නේ? 😒", "කවුද වැඩියෙන්ම සිංදු අහන්න ආස? 🎧", "කවුද වැඩියෙන්ම කෑම උයන්න දක්ෂ? 👨‍🍳",
-    "කවුද වැඩියෙන්ම පාටි වලට යන්න ආස? 🥳", "කවුද වැඩියෙන්ම පරණ දේවල් මතක තියාගෙන ඉන්නේ? 🕰️", "කවුද වැඩියෙන්ම දවල් හීන දකින්නේ? 💭",
-    "කවුද නිතරම මොනවා හරි අමතක කරලා හොයන්නේ? 🔎", "කවුද අමාරු වෙලාවක වැඩියෙන්ම හයියක් වෙන්නේ? 💪", "කවුද වැඩියෙන්ම වාහන පදවන්න ආස/දක්ෂ? 🏎️",
-    "කවුද වැඩියෙන්ම ෆොටෝස් වලට පෝස් දෙන්න දක්ෂ? 🕺", "කවුද නිතරම අනිත් කෙනාව හිනස්සන්නේ? 😁"
+    "කවුද ගෙදර වැඩ වලට වැඩියෙන්ම උදව් කරන්නේ? 🧹", "කවුද වැඩියෙන්ම ළමයින්ට ආදරේ? 👶", "කවුද සත්තුන්ට වැඩියෙන්ම ආදරේ? 🐶"
 ];
 let availableQuestions = [];
 let currentQIndex = 0, myQuizAns = null, partnerQuizAns = null;
@@ -502,16 +542,17 @@ window.openGuessGuestWaiting = function() {
 
 window.startGameGuess = function() {
     guessMax = parseInt(document.getElementById('guess-max-limit').value);
-    sendData({type: 'guess-range', max: guessMax});
-    initPickSecret(guessMax);
+    guessTurn = Math.random() < 0.5 ? 'host' : 'guest';
+    sendData({type: 'guess-range', max: guessMax, turn: guessTurn});
+    initPickSecret(guessMax, guessTurn);
 }
 
-function initPickSecret(max) {
+function initPickSecret(max, turn) {
     guessMax = max;
     mySecret = null;
     partnerSecret = null;
     isGuessGameOver = false;
-    guessTurn = 'host';
+    guessTurn = turn;
     
     showScreen('screen-guess');
     document.getElementById('guess-setup').classList.add('hidden');
@@ -635,5 +676,331 @@ function updateGuessUI() {
         ind.innerText = "⏳ දැන් එයාගේ වාරේ...";
         ind.className = "turn-indicator their-turn";
         document.getElementById('btn-submit-guess').disabled = true;
+    }
+}
+
+// --- 6. Tic Tac Toe (❤️ & ❌) ---
+let tttBoard = Array(9).fill(null);
+let tttTurn = 'host';
+let tttGameOver = false;
+let tttHostReady = false;
+let tttGuestReady = false;
+
+const winPatterns = [
+    [0,1,2], [3,4,5], [6,7,8], 
+    [0,3,6], [1,4,7], [2,5,8], 
+    [0,4,8], [2,4,6]           
+];
+
+window.startTicTacToe = function() {
+    if(!isHost) return;
+    let starter = Math.random() < 0.5 ? 'host' : 'guest';
+    sendData({type: 'start-ttt', turn: starter});
+    initTicTacToe(starter);
+}
+
+function initTicTacToe(turn) {
+    tttBoard = Array(9).fill(null);
+    tttTurn = turn; 
+    tttGameOver = false;
+    tttHostReady = false;
+    tttGuestReady = false;
+    
+    showScreen('screen-tictactoe');
+    document.getElementById('ttt-result-box').classList.add('hidden');
+    document.getElementById('ttt-wait-text').classList.add('hidden');
+    document.getElementById('btn-ttt-yes').disabled = false;
+    document.getElementById('btn-ttt-home').classList.add('hidden');
+    
+    const grid = document.getElementById('ttt-grid');
+    grid.innerHTML = '';
+    for(let i=0; i<9; i++) {
+        let cell = document.createElement('div');
+        cell.className = 'ttt-cell';
+        cell.id = `ttt-cell-${i}`;
+        cell.onclick = () => handleTttClick(i);
+        grid.appendChild(cell);
+    }
+    updateTttUI();
+}
+
+function handleTttClick(i) {
+    if(tttGameOver || tttBoard[i] !== null) return;
+    let amI = isHost ? 'host' : 'guest';
+    if(tttTurn !== amI) return window.showToast("දැන් එයාගේ වාරේ!");
+    
+    sendData({type: 'ttt-move', index: i});
+    processTttMove(i);
+}
+
+function processTttMove(i) {
+    tttBoard[i] = tttTurn; 
+    let cell = document.getElementById(`ttt-cell-${i}`);
+    cell.innerText = tttTurn === 'host' ? '❌' : '❤️';
+    cell.classList.add('taken');
+    
+    if (checkTttWin(tttTurn)) {
+        tttGameOver = true;
+        handleTttEnd(tttTurn === (isHost ? 'host' : 'guest') ? 'win' : 'lose', tttTurn);
+    } else if (!tttBoard.includes(null)) {
+        tttGameOver = true;
+        handleTttEnd('draw', null);
+    } else {
+        tttTurn = tttTurn === 'host' ? 'guest' : 'host';
+        updateTttUI();
+    }
+}
+
+function checkTttWin(player) {
+    for(let pattern of winPatterns) {
+        const [a,b,c] = pattern;
+        if(tttBoard[a] === player && tttBoard[b] === player && tttBoard[c] === player) {
+            document.getElementById(`ttt-cell-${a}`).classList.add('win-cell');
+            document.getElementById(`ttt-cell-${b}`).classList.add('win-cell');
+            document.getElementById(`ttt-cell-${c}`).classList.add('win-cell');
+            return true;
+        }
+    }
+    return false;
+}
+
+function handleTttEnd(result, winner) {
+    let text = "";
+    if(result === 'win') text = "🎉 සුපිරි! ඔයා දිනුම්!";
+    else if(result === 'lose') text = "😢 අඩේ! එයා දිනුම්!";
+    else text = "🤝 තරඟය සමයි! (Draw)";
+    
+    document.getElementById('ttt-result-text').innerText = text;
+    document.getElementById('ttt-result-text').style.color = result === 'win' ? '#2b9348' : (result === 'lose' ? '#c1121f' : '#0077b6');
+    document.getElementById('ttt-result-box').classList.remove('hidden');
+    document.getElementById('ttt-turn-indicator').innerText = "🏆 ගේම් ඉවරයි!";
+    document.getElementById('ttt-turn-indicator').className = "turn-indicator my-turn";
+}
+
+window.tttPlayAgain = function() {
+    document.getElementById('btn-ttt-yes').disabled = true;
+    document.getElementById('ttt-wait-text').classList.remove('hidden');
+    
+    if(isHost) tttHostReady = true; else tttGuestReady = true;
+    sendData({type: 'ttt-ready'});
+    
+    checkTttRestart();
+}
+
+function checkTttRestart() {
+    if(tttHostReady && tttGuestReady) {
+        let starter = Math.random() < 0.5 ? 'host' : 'guest';
+        initTicTacToe(starter); 
+    }
+}
+
+function updateTttUI() {
+    if(tttGameOver) return;
+    let amI = isHost ? 'host' : 'guest';
+    let ind = document.getElementById('ttt-turn-indicator');
+    
+    if(tttTurn === amI) {
+        ind.innerText = `👉 දැන් ඔයාගේ වාරේ (${isHost ? '❌' : '❤️'})`;
+        ind.className = "turn-indicator my-turn";
+    } else {
+        ind.innerText = `⏳ දැන් එයාගේ වාරේ (${!isHost ? '❌' : '❤️'})...`;
+        ind.className = "turn-indicator their-turn";
+    }
+}
+
+// --- 8. Number Hunt (ඉලක්කම් දඩයම) ---
+let huntBoard = [], huntTarget = null, huntScoreH = 0, huntScoreG = 0;
+
+window.startNumberHunt = function() {
+    if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
+    generateHuntRound(0, 0);
+}
+
+function generateHuntRound(scoreH, scoreG) {
+    let nums = [];
+    while(nums.length < 25) {
+        let r = Math.floor(Math.random() * 99) + 1;
+        if(!nums.includes(r)) nums.push(r);
+    }
+    let target = nums[Math.floor(Math.random() * 25)];
+    sendData({type: 'start-hunt', board: nums, target: target, scoreH: scoreH, scoreG: scoreG});
+    initHuntBoard(nums, target, scoreH, scoreG);
+}
+
+function initHuntBoard(board, target, scoreH, scoreG) {
+    huntBoard = board; huntTarget = target; huntScoreH = scoreH; huntScoreG = scoreG;
+    showScreen('screen-hunt');
+    document.getElementById('hunt-winner-text').classList.add('hidden');
+    document.getElementById('btn-hunt-home').classList.add('hidden');
+    
+    document.getElementById('hunt-score-host').innerText = scoreH;
+    document.getElementById('hunt-score-guest').innerText = scoreG;
+    document.getElementById('hunt-target-box').innerText = target;
+    
+    if (scoreH === 5 || scoreG === 5) {
+        endHuntGame(); return;
+    }
+    
+    const grid = document.getElementById('hunt-grid');
+    grid.innerHTML = '';
+    for(let i=0; i<25; i++) {
+        let cell = document.createElement('div');
+        cell.className = 'h-cell';
+        cell.innerText = board[i];
+        cell.onclick = () => handleHuntClick(board[i]);
+        grid.appendChild(cell);
+    }
+}
+
+function handleHuntClick(num) {
+    if(num === huntTarget) {
+        if(isHost) {
+            generateHuntRound(huntScoreH + 1, huntScoreG);
+        } else {
+            sendData({type: 'hunt-click', num: num});
+        }
+    } else {
+        window.showToast("❌ වැරදියි! ආයේ බලන්න.");
+    }
+}
+
+function handlePartnerHuntClick(num) {
+    if(isHost && num === huntTarget) {
+        generateHuntRound(huntScoreH, huntScoreG + 1);
+    }
+}
+
+function endHuntGame() {
+    document.getElementById('hunt-grid').innerHTML = '';
+    let winner = document.getElementById('hunt-winner-text');
+    let amI = isHost ? 'host' : 'guest';
+    
+    if ((huntScoreH === 5 && amI === 'host') || (huntScoreG === 5 && amI === 'guest')) {
+        winner.innerText = "🎉 සුපිරි! ඔයා දිනුම්!";
+    } else {
+        winner.innerText = "😢 අඩේ! එයා දිනුම්!";
+        winner.style.color = "#c1121f";
+    }
+    winner.classList.remove('hidden');
+    document.getElementById('btn-hunt-home').classList.remove('hidden');
+}
+
+
+// --- 9. Snakes and Ladders (නයා සහ ඉණිමඟ) ---
+let slPosHost = 1, slPosGuest = 1, slTurn = 'host', isSlGameOver = false;
+
+const slMap = {
+    16:6, 47:26, 49:11, 56:53, 62:19, 64:60, 87:24, 93:73, 95:75, 98:78, // Snakes
+    1:38, 4:14, 9:31, 21:42, 28:84, 36:44, 51:67, 71:91, 80:100 // Ladders
+};
+
+window.startSnakesLadders = function() {
+    if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
+    let starter = Math.random() < 0.5 ? 'host' : 'guest';
+    sendData({type: 'start-sl', turn: starter});
+    initSnakesLadders(starter);
+}
+
+function initSnakesLadders(turn) {
+    slPosHost = 1; slPosGuest = 1; slTurn = turn; isSlGameOver = false;
+    showScreen('screen-sl');
+    document.getElementById('sl-winner-text').classList.add('hidden');
+    document.getElementById('btn-sl-home').classList.add('hidden');
+    document.getElementById('sl-dice-result').innerText = '🎲';
+    renderSlBoard();
+    updateSlUI();
+}
+
+function renderSlBoard() {
+    const grid = document.getElementById('sl-grid');
+    grid.innerHTML = '';
+    
+    // Zig-Zag Board 100 to 1
+    for (let row = 9; row >= 0; row--) {
+        for (let col = 0; col < 10; col++) {
+            let num = (row % 2 === 1) ? (row * 10 + col + 1) : (row * 10 + 9 - col + 1);
+            let cell = document.createElement('div');
+            cell.className = 'sl-cell';
+            
+            if(slMap[num] && slMap[num] < num) cell.classList.add('snake-head');
+            if(slMap[num] && slMap[num] > num) cell.classList.add('ladder-base');
+            
+            cell.innerHTML = `${num}<div class="sl-tokens" id="sl-cell-${num}"></div>`;
+            grid.appendChild(cell);
+        }
+    }
+    
+    document.getElementById(`sl-cell-${slPosHost}`).innerHTML += '🔴';
+    document.getElementById(`sl-cell-${slPosGuest}`).innerHTML += '🔵';
+    document.getElementById('sl-pos-me').innerText = isHost ? slPosHost : slPosGuest;
+    document.getElementById('sl-pos-them').innerText = isHost ? slPosGuest : slPosHost;
+}
+
+window.slRollDice = function() {
+    let amI = isHost ? 'host' : 'guest';
+    if(slTurn !== amI || isSlGameOver) return window.showToast("දැන් එයාගේ වාරේ!");
+    
+    let dice = Math.floor(Math.random() * 6) + 1;
+    let oldPos = amI === 'host' ? slPosHost : slPosGuest;
+    let newPos = oldPos + dice;
+    
+    if(newPos > 100) newPos = 100;
+    
+    let snake = false, ladder = false;
+    if(slMap[newPos]) {
+        if(slMap[newPos] < newPos) snake = true;
+        else ladder = true;
+        newPos = slMap[newPos];
+    }
+    
+    sendData({type: 'sl-move', player: amI, dice: dice, newPos: newPos, snake: snake, ladder: ladder});
+    processSlMove(amI, dice, newPos, snake, ladder);
+}
+
+function processSlMove(player, dice, newPos, snake, ladder) {
+    document.getElementById('sl-dice-result').innerText = `🎲 ${dice}`;
+    
+    if(snake) window.showToast(`🐍 අයියෝ! නයෙක් කෑවා!`);
+    if(ladder) window.showToast(`🪜 නියමයි! ඉණිමඟක්!`);
+    
+    if(player === 'host') slPosHost = newPos;
+    else slPosGuest = newPos;
+    
+    renderSlBoard();
+    
+    if(newPos === 100) {
+        isSlGameOver = true;
+        let amI = isHost ? 'host' : 'guest';
+        let winnerTxt = document.getElementById('sl-winner-text');
+        winnerTxt.classList.remove('hidden');
+        document.getElementById('btn-sl-home').classList.remove('hidden');
+        document.getElementById('btn-sl-roll').disabled = true;
+        
+        if(player === amI) {
+            winnerTxt.innerText = "🎉 සුපිරි! ඔයා දිනුම්!";
+            window.showToast("ඔයා දිනුම්!");
+        } else {
+            winnerTxt.innerText = "😢 අඩේ! එයා දිනුම්!";
+            winnerTxt.style.color = "#c1121f";
+        }
+    } else {
+        slTurn = slTurn === 'host' ? 'guest' : 'host';
+        updateSlUI();
+    }
+}
+
+function updateSlUI() {
+    if(isSlGameOver) return;
+    let amI = isHost ? 'host' : 'guest';
+    let ind = document.getElementById('sl-turn-indicator');
+    
+    if(slTurn === amI) {
+        ind.innerText = "👉 දැන් ඔයාගේ වාරේ (දාදු කැටය දාන්න)";
+        ind.className = "turn-indicator my-turn";
+        document.getElementById('btn-sl-roll').disabled = false;
+    } else {
+        ind.innerText = "⏳ දැන් එයාගේ වාරේ...";
+        ind.className = "turn-indicator their-turn";
+        document.getElementById('btn-sl-roll').disabled = true;
     }
 }
