@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getDatabase, ref, set, onValue, push, onChildAdded, onDisconnect, remove, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+import { getDatabase, ref, set, onValue, push, onChildAdded, onDisconnect, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
 // ඔයාගේ FIREBASE CONFIG එක
 const firebaseConfig = {
@@ -20,7 +20,7 @@ const db = getDatabase(app);
 let gameId = Math.floor(10000 + Math.random() * 90000).toString();
 let isHost = true;
 
-const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-setup', 'screen-battleship-play', 'screen-quiz', 'screen-memory'];
+const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-setup', 'screen-battleship-play', 'screen-quiz', 'screen-memory', 'screen-guess'];
 
 function showScreen(id) { 
     screens.forEach(s => document.getElementById(s).classList.add('hidden')); 
@@ -108,6 +108,7 @@ function setupDataHandler() {
         if (msg.sender === (isHost ? 'host' : 'guest')) return; // Ignore own messages
 
         const data = msg.data;
+        // Game Logic Handling
         if(data.type === 'go-lobby') showScreen('screen-lobby');
         else if(data.type === 'start-pic') initPictionary();
         else if(data.type === 'draw') drawLine(data.x0, data.y0, data.x1, data.y1, data.color, false);
@@ -119,6 +120,10 @@ function setupDataHandler() {
         else if(data.type === 'quiz-ans') { partnerQuizAns = data.ans; checkQuizResults(); }
         else if(data.type === 'start-memory') { if(!isHost) initMemoryMatch(data.board); }
         else if(data.type === 'memory-flip') processMemoryFlip(data.index);
+        // Guess the Number Handlers
+        else if(data.type === 'start-guess-setup') { if(!isHost) openGuessGuestWaiting(); }
+        else if(data.type === 'guess-init') { initGuessPlay(data.max, data.secret); }
+        else if(data.type === 'guess-submit') { processGuess(data.guess, data.senderTurn); }
     });
 
     const activeStatusRef = ref(db, `games/${gameId}/status`);
@@ -258,7 +263,7 @@ function processBattleClick(i) { if(playStats.done) return; const cell = documen
 function updatePlayUI() { document.getElementById('play-h').innerText = `${playStats.hearts}/3`; document.getElementById('play-c').innerText = playStats.tries; }
 function checkWinLoss() { if(playStats.hearts === 3) { playStats.done = true; document.getElementById('battle-instructions').innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; showToast('දෙන්නා දිනුම්! ❤️'); document.getElementById('btn-battle-home').classList.remove('hidden'); } else if(playStats.tries === 0) { playStats.done = true; document.getElementById('battle-instructions').innerText = '😢 චාන්ස් ඉවරයි! ඔයා පැරදුනා.'; showToast('ගේම් ඕවර්! 💔'); battleData.h.forEach(i => { const c = document.getElementById(`bcell-${i}`); if(c.innerHTML === '') c.innerHTML = '❤️'; }); document.getElementById('btn-battle-home').classList.remove('hidden'); } }
 
-// --- 4. Quiz ---
+// --- 4. Quiz Game (No Duplicates) ---
 const quizQuestions = [
     "කවුද වැඩියෙන්ම කේන්ති ගන්නේ? 😡", "කවුද වැඩියෙන්ම කන්න පෙරේත? 🍕", "කවුද මුලින්ම 'ආදරෙයි' කිව්වේ? ❤️",
     "කවුද මුලින්ම යාළු වෙන්න ඇහුවේ? 😍", "කවුද වැඩියෙන්ම නිදාගන්නේ? 😴", "කවුද වැඩියෙන්ම සල්ලි වියදම් කරන්නේ? 💸",
@@ -266,11 +271,177 @@ const quizQuestions = [
     "වලියක් ගියාම කවුද මුලින්ම sorry කියන්නේ? 🥺", "කවුද බොරුවට තරහ අරන් බලන් ඉන්නේ? 😤", "කවුද වැඩියෙන්ම රොමෑන්ටික්? 🥰",
     "කවුද ලස්සනටම අඳින්නේ පලඳින්නේ? 👗", "ෆිල්ම් එකක් බලද්දි වැඩියෙන්ම අඬන්නේ කවුද? 😭", "කෑම තෝරන්නේ කවුද? 😒",
     "කවුද වැඩියෙන්ම සර්ප්‍රයිස් දෙන්න දක්ෂ? 🎁", "අනාගතේ ගැන වැඩියෙන්ම ප්ලෑන් කරන්නේ කවුද? 🏡", "කවුද දේවල් ඉක්මනටම අමතක කරන්නේ? 🧠",
-    "කවුද රහස් රකින්න වැඩියෙන්ම දක්ෂ? 🤫", "නානකාමරේ වැඩියෙන්ම සිංදු කියන්නේ කවුද? 🚿", "කවුද වැඩියෙන්ම ට්‍රිප් යන්න ආස? 🚗"
+    "කවුද රහස් රකින්න වැඩියෙන්ම දක්ෂ? 🤫", "නානකාමරේ වැඩියෙන්ම සිංදු කියන්නේ කවුද? 🚿", "කවුද වැඩියෙන්ම ට්‍රිප් යන්න ආස? 🚗",
+    "කවුද වැඩියෙන්ම කම්මැලි? 🥱", "කවුද ඉක්මනටම ලෙඩ වෙන්නේ? 🤒", "කවුද ගොඩක් වෙලා කණ්ණාඩිය ඉස්සරහ ඉන්නේ? 🪞",
+    "කවුද වැඩියෙන්ම ෂොපින් යන්න ආස? 🛍️", "කවුද වැඩියෙන්ම කතා කරන්නේ (වෙහෙසක් නැතුව)? 🗣️", "කවුද වැඩියෙන්ම කෝපි/තේ බොන්නේ? ☕",
+    "කවුද ගෙදර වැඩ වලට වැඩියෙන්ම උදව් කරන්නේ? 🧹", "කවුද වැඩියෙන්ම ළමයින්ට ආදරේ? 👶", "කවුද සත්තුන්ට වැඩියෙන්ම ආදරේ? 🐶",
+    "කවුද වැඩියෙන්ම ජෝක්ස් කරන්නේ? 😂", "කවුද ඉක්මනටම බය වෙන්නේ? 👻", "කවුද ගොඩක්ම පිරිසිදුවට ඉන්න ආස? 🧼",
+    "කවුද රෑට ගෙරවන්නේ? 💤", "කවුද මුලින්ම මැසේජ් කරන්නේ/රිප්ලයි කරන්නේ? 💬", "කවුද වැඩියෙන්ම චොකලට්/පැණිරස කන්න ආස? 🍫",
+    "කවුද වැඩියෙන්ම ගේම්ස් ගහන්නේ? 🎮", "කවුද වැඩියෙන්ම ටික්ටොක්/යූටියුබ් බලන්නේ? 🎬", "කවුද පොඩි දේටත් ඉක්මනටම අඬන්නේ? 😢",
+    "කවුද වැඩියෙන්ම ඊර්ෂ්‍යා කරන්නේ? 😒", "කවුද වැඩියෙන්ම සිංදු අහන්න ආස? 🎧", "කවුද වැඩියෙන්ම කෑම උයන්න දක්ෂ? 👨‍🍳",
+    "කවුද වැඩියෙන්ම පාටි වලට යන්න ආස? 🥳", "කවුද වැඩියෙන්ම පරණ දේවල් මතක තියාගෙන ඉන්නේ? 🕰️", "කවුද වැඩියෙන්ම දවල් හීන දකින්නේ? 💭",
+    "කවුද නිතරම මොනවා හරි අමතක කරලා හොයන්නේ? 🔎", "කවුද අමාරු වෙලාවක වැඩියෙන්ම හයියක් වෙන්නේ? 💪", "කවුද වැඩියෙන්ම වාහන පදවන්න ආස/දක්ෂ? 🏎️",
+    "කවුද වැඩියෙන්ම ෆොටෝස් වලට පෝස් දෙන්න දක්ෂ? 🕺", "කවුද නිතරම අනිත් කෙනාව හිනස්සන්නේ? 😁"
 ];
+let availableQuestions = [];
 let currentQIndex = 0, myQuizAns = null, partnerQuizAns = null;
-window.startQuiz = function() { if(!isHost) return showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); currentQIndex = Math.floor(Math.random() * quizQuestions.length); sendData({type: 'start-quiz', qIndex: currentQIndex}); initQuiz(currentQIndex); }
-function initQuiz(qIndex) { currentQIndex = qIndex; myQuizAns = null; partnerQuizAns = null; showScreen('screen-quiz'); document.getElementById('quiz-q-text').innerText = quizQuestions[qIndex]; document.getElementById('quiz-question-container').classList.remove('hidden'); document.getElementById('quiz-waiting').classList.add('hidden'); document.getElementById('quiz-result').classList.add('hidden'); document.getElementById('btn-next-quiz').classList.add('hidden'); }
-window.submitQuizAns = function(ans) { let absoluteAns = isHost ? (ans === 'me' ? 'host' : 'guest') : (ans === 'me' ? 'guest' : 'host'); myQuizAns = absoluteAns; sendData({type: 'quiz-ans', ans: absoluteAns}); document.getElementById('quiz-question-container').classList.add('hidden'); checkQuizResults(); }
-function checkQuizResults() { if(myQuizAns && partnerQuizAns) { document.getElementById('quiz-waiting').classList.add('hidden'); document.getElementById('quiz-result').classList.remove('hidden'); let resTitle = document.getElementById('quiz-result-title'); let resDetail = document.getElementById('quiz-result-detail'); if(myQuizAns === partnerQuizAns) { resTitle.innerText = "🎉 දෙන්නම එකඟයි!"; resTitle.style.color = "#2b9348"; let who = (isHost && myQuizAns === 'guest') || (!isHost && myQuizAns === 'host') ? "එයා" : "ඔයා"; resDetail.innerText = `දෙන්නම පිළිගත්තා වැඩියෙන්ම ඒ දේ කරන්නේ '${who}' කියලා! 😂❤️`; } else { resTitle.innerText = "⚔️ දෙන්නට දෙකක්!"; resTitle.style.color = "#c1121f"; resDetail.innerText = "මෙතන නම් ලොකු වලියක් යයි වගේ! 😅 දෙන්නම කියන්නේ අනිත් කෙනා කියලා."; } if(isHost) { document.getElementById('btn-next-quiz').classList.remove('hidden'); } } else if (myQuizAns) { document.getElementById('quiz-waiting').classList.remove('hidden'); } }
+
+window.startQuiz = function() { 
+    if(!isHost) return showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); 
+    if (availableQuestions.length === 0) {
+        availableQuestions = quizQuestions.map((_, index) => index);
+        showToast("අලුත් වටයක් පටන් ගත්තා! 🔄");
+    }
+    const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+    currentQIndex = availableQuestions[randomIndex];
+    availableQuestions.splice(randomIndex, 1);
+    
+    sendData({type: 'start-quiz', qIndex: currentQIndex}); 
+    initQuiz(currentQIndex); 
+}
+
+function initQuiz(qIndex) { 
+    currentQIndex = qIndex; myQuizAns = null; partnerQuizAns = null; 
+    showScreen('screen-quiz'); 
+    document.getElementById('quiz-q-text').innerText = quizQuestions[qIndex]; 
+    document.getElementById('quiz-question-container').classList.remove('hidden'); 
+    document.getElementById('quiz-waiting').classList.add('hidden'); 
+    document.getElementById('quiz-result').classList.add('hidden'); 
+    document.getElementById('btn-next-quiz').classList.add('hidden'); 
+}
+
+window.submitQuizAns = function(ans) { 
+    let absoluteAns = isHost ? (ans === 'me' ? 'host' : 'guest') : (ans === 'me' ? 'guest' : 'host'); 
+    myQuizAns = absoluteAns; 
+    sendData({type: 'quiz-ans', ans: absoluteAns}); 
+    document.getElementById('quiz-question-container').classList.add('hidden'); 
+    checkQuizResults(); 
+}
+
+function checkQuizResults() { 
+    if(myQuizAns && partnerQuizAns) { 
+        document.getElementById('quiz-waiting').classList.add('hidden'); 
+        document.getElementById('quiz-result').classList.remove('hidden'); 
+        let resTitle = document.getElementById('quiz-result-title'); 
+        let resDetail = document.getElementById('quiz-result-detail'); 
+        
+        if(myQuizAns === partnerQuizAns) { 
+            resTitle.innerText = "🎉 දෙන්නම එකඟයි!"; 
+            resTitle.style.color = "#2b9348"; 
+            let who = (isHost && myQuizAns === 'guest') || (!isHost && myQuizAns === 'host') ? "එයා" : "ඔයා"; 
+            resDetail.innerText = `දෙන්නම පිළිගත්තා වැඩියෙන්ම ඒ දේ කරන්නේ '${who}' කියලා! 😂❤️`; 
+        } else { 
+            resTitle.innerText = "⚔️ දෙන්නට දෙකක්!"; 
+            resTitle.style.color = "#c1121f"; 
+            resDetail.innerText = "මෙතන නම් ලොකු වලියක් යයි වගේ! 😅 දෙන්නම කියන්නේ අනිත් කෙනා කියලා."; 
+        } 
+        if(isHost) { document.getElementById('btn-next-quiz').classList.remove('hidden'); } 
+    } else if (myQuizAns) { 
+        document.getElementById('quiz-waiting').classList.remove('hidden'); 
+    } 
+}
+
 window.nextQuizQ = function() { window.startQuiz(); }
+
+// --- 5. Guess the Number ---
+let guessSecret = 0, guessMax = 100, guessTurn = 'host', isGuessGameOver = false;
+
+window.openGuessSetup = function() {
+    sendData({type: 'start-guess-setup'});
+    if(isHost) {
+        showScreen('screen-guess');
+        document.getElementById('guess-setup').classList.remove('hidden');
+        document.getElementById('guess-waiting').classList.add('hidden');
+        document.getElementById('guess-play').classList.add('hidden');
+    } else {
+        openGuessGuestWaiting();
+    }
+}
+
+window.openGuessGuestWaiting = function() {
+    showScreen('screen-guess');
+    document.getElementById('guess-setup').classList.add('hidden');
+    document.getElementById('guess-waiting').classList.remove('hidden');
+    document.getElementById('guess-play').classList.add('hidden');
+}
+
+window.startGameGuess = function() {
+    guessMax = parseInt(document.getElementById('guess-max-limit').value);
+    guessSecret = Math.floor(Math.random() * guessMax) + 1;
+    sendData({type: 'guess-init', max: guessMax, secret: guessSecret});
+    initGuessPlay(guessMax, guessSecret);
+}
+
+function initGuessPlay(max, secret) {
+    guessMax = max;
+    guessSecret = secret;
+    guessTurn = 'host';
+    isGuessGameOver = false;
+    
+    showScreen('screen-guess');
+    document.getElementById('guess-setup').classList.add('hidden');
+    document.getElementById('guess-waiting').classList.add('hidden');
+    document.getElementById('guess-play').classList.remove('hidden');
+    
+    document.getElementById('guess-instruction').innerText = `1 ඉඳන් ${max} ට අඩු ඉලක්කමක් මම හිතුවා! 🤫`;
+    document.getElementById('guess-hint-text').innerHTML = "මුලින්ම ගෙස් කරන්න පටන්ගමු 👇";
+    document.getElementById('guess-hint-text').style.color = "#590d22";
+    document.getElementById('guess-input').value = '';
+    document.getElementById('btn-guess-home').classList.add('hidden');
+    
+    updateGuessUI();
+}
+
+window.submitGuess = function() {
+    let amI = isHost ? 'host' : 'guest';
+    if(guessTurn !== amI || isGuessGameOver) return showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
+    
+    let myGuess = parseInt(document.getElementById('guess-input').value);
+    if(isNaN(myGuess) || myGuess < 1 || myGuess > guessMax) return showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
+    
+    sendData({type: 'guess-submit', guess: myGuess, senderTurn: amI});
+    processGuess(myGuess, amI);
+    document.getElementById('guess-input').value = '';
+}
+
+function processGuess(guess, player) {
+    let hintText = document.getElementById('guess-hint-text');
+    let who = (player === (isHost ? 'host' : 'guest')) ? "ඔයා" : "එයා";
+    
+    if(guess === guessSecret) {
+        hintText.innerHTML = `🎉 සුපිරි! <b>${who}</b> හරි ඉලක්කම හොයාගත්තා! <br><br> රහස් ඉලක්කම: ${guessSecret}`;
+        hintText.style.color = "#2b9348";
+        isGuessGameOver = true;
+        document.getElementById('btn-guess-home').classList.remove('hidden');
+        document.getElementById('guess-turn-indicator').innerText = `🏆 ගේම් ඉවරයි! ${who} දිනුම්!`;
+        document.getElementById('guess-turn-indicator').className = "turn-indicator my-turn";
+        document.getElementById('btn-submit-guess').disabled = true;
+        showToast("දිනුම්! 🎯");
+    } else {
+        if(guess < guessSecret) {
+            hintText.innerHTML = `⬆️ <b>${guess}</b> ට වඩා වැඩියි! <br><span style="font-size:14px;color:#800f2f;">(${who}ගේ ගෙස් එක)</span>`;
+            hintText.style.color = "#0077b6";
+        } else {
+            hintText.innerHTML = `⬇️ <b>${guess}</b> ට වඩා අඩුයි! <br><span style="font-size:14px;color:#800f2f;">(${who}ගේ ගෙස් එක)</span>`;
+            hintText.style.color = "#c1121f";
+        }
+        guessTurn = guessTurn === 'host' ? 'guest' : 'host';
+        updateGuessUI();
+    }
+}
+
+function updateGuessUI() {
+    if(isGuessGameOver) return;
+    let amI = isHost ? 'host' : 'guest';
+    let ind = document.getElementById('guess-turn-indicator');
+    
+    if(guessTurn === amI) {
+        ind.innerText = "👉 දැන් ඔයාගේ වාරේ (ගෙස් කරන්න)";
+        ind.className = "turn-indicator my-turn";
+        document.getElementById('btn-submit-guess').disabled = false;
+    } else {
+        ind.innerText = "⏳ දැන් එයාගේ වාරේ...";
+        ind.className = "turn-indicator their-turn";
+        document.getElementById('btn-submit-guess').disabled = true;
+    }
+}
