@@ -96,6 +96,9 @@ function sendData(data) {
 }
 
 function setupDataHandler() {
+    // Show Voice Call Button
+    document.getElementById('btn-call').classList.remove('hidden');
+
     const messagesRef = ref(db, `games/${gameId}/messages`);
     onChildAdded(messagesRef, snap => {
         const msg = snap.val();
@@ -129,6 +132,12 @@ function setupDataHandler() {
             if(isHost) tttGuestReady = true; else tttHostReady = true;
             checkTttRestart();
         }
+
+        // Voice Call
+        else if(data.type === 'call-offer') { window.handleCallOffer(data.offer); }
+        else if(data.type === 'call-answer') { if(pc) pc.setRemoteDescription(new RTCSessionDescription(data.answer)).then(window.flushIceQueue); }
+        else if(data.type === 'ice-candidate') { window.handleIceCandidate(data.candidate); }
+        else if(data.type === 'end-call') { window.endCall(); }
     });
 
     const activeStatusRef = ref(db, `games/${gameId}/status`);
@@ -141,132 +150,6 @@ function setupDataHandler() {
 }
 
 window.goLobby = function() { showScreen('screen-lobby'); sendData({type: 'go-lobby'}); }
-
-// --- 6. Tic Tac Toe (❤️ & ❌) ---
-let tttBoard = Array(9).fill(null);
-let tttTurn = 'host';
-let tttGameOver = false;
-let tttHostReady = false;
-let tttGuestReady = false;
-
-const winPatterns = [
-    [0,1,2], [3,4,5], [6,7,8], // rows
-    [0,3,6], [1,4,7], [2,5,8], // cols
-    [0,4,8], [2,4,6]           // diagonals
-];
-
-window.startTicTacToe = function() {
-    sendData({type: 'start-ttt'});
-    initTicTacToe();
-}
-
-function initTicTacToe() {
-    tttBoard = Array(9).fill(null);
-    tttTurn = 'host'; 
-    tttGameOver = false;
-    tttHostReady = false;
-    tttGuestReady = false;
-    
-    showScreen('screen-tictactoe');
-    document.getElementById('ttt-result-box').classList.add('hidden');
-    document.getElementById('ttt-wait-text').classList.add('hidden');
-    document.getElementById('btn-ttt-yes').disabled = false;
-    document.getElementById('btn-ttt-home').classList.add('hidden');
-    
-    const grid = document.getElementById('ttt-grid');
-    grid.innerHTML = '';
-    for(let i=0; i<9; i++) {
-        let cell = document.createElement('div');
-        cell.className = 'ttt-cell';
-        cell.id = `ttt-cell-${i}`;
-        cell.onclick = () => handleTttClick(i);
-        grid.appendChild(cell);
-    }
-    updateTttUI();
-}
-
-function handleTttClick(i) {
-    if(tttGameOver || tttBoard[i] !== null) return;
-    let amI = isHost ? 'host' : 'guest';
-    if(tttTurn !== amI) return window.showToast("දැන් එයාගේ වාරේ!");
-    
-    sendData({type: 'ttt-move', index: i});
-    processTttMove(i);
-}
-
-function processTttMove(i) {
-    tttBoard[i] = tttTurn; 
-    let cell = document.getElementById(`ttt-cell-${i}`);
-    cell.innerText = tttTurn === 'host' ? '❌' : '❤️';
-    cell.classList.add('taken');
-    
-    if (checkTttWin(tttTurn)) {
-        tttGameOver = true;
-        handleTttEnd(tttTurn === (isHost ? 'host' : 'guest') ? 'win' : 'lose', tttTurn);
-    } else if (!tttBoard.includes(null)) {
-        tttGameOver = true;
-        handleTttEnd('draw', null);
-    } else {
-        tttTurn = tttTurn === 'host' ? 'guest' : 'host';
-        updateTttUI();
-    }
-}
-
-function checkTttWin(player) {
-    for(let pattern of winPatterns) {
-        const [a,b,c] = pattern;
-        if(tttBoard[a] === player && tttBoard[b] === player && tttBoard[c] === player) {
-            document.getElementById(`ttt-cell-${a}`).classList.add('win-cell');
-            document.getElementById(`ttt-cell-${b}`).classList.add('win-cell');
-            document.getElementById(`ttt-cell-${c}`).classList.add('win-cell');
-            return true;
-        }
-    }
-    return false;
-}
-
-function handleTttEnd(result, winner) {
-    let text = "";
-    if(result === 'win') text = "🎉 සුපිරි! ඔයා දිනුම්!";
-    else if(result === 'lose') text = "😢 අඩේ! එයා දිනුම්!";
-    else text = "🤝 තරඟය සමයි! (Draw)";
-    
-    document.getElementById('ttt-result-text').innerText = text;
-    document.getElementById('ttt-result-text').style.color = result === 'win' ? '#2b9348' : (result === 'lose' ? '#c1121f' : '#0077b6');
-    document.getElementById('ttt-result-box').classList.remove('hidden');
-    document.getElementById('ttt-turn-indicator').innerText = "🏆 ගේම් ඉවරයි!";
-    document.getElementById('ttt-turn-indicator').className = "turn-indicator my-turn";
-}
-
-window.tttPlayAgain = function() {
-    document.getElementById('btn-ttt-yes').disabled = true;
-    document.getElementById('ttt-wait-text').classList.remove('hidden');
-    
-    if(isHost) tttHostReady = true; else tttGuestReady = true;
-    sendData({type: 'ttt-ready'});
-    
-    checkTttRestart();
-}
-
-function checkTttRestart() {
-    if(tttHostReady && tttGuestReady) {
-        initTicTacToe(); 
-    }
-}
-
-function updateTttUI() {
-    if(tttGameOver) return;
-    let amI = isHost ? 'host' : 'guest';
-    let ind = document.getElementById('ttt-turn-indicator');
-    
-    if(tttTurn === amI) {
-        ind.innerText = `👉 දැන් ඔයාගේ වාරේ (${isHost ? '❌' : '❤️'})`;
-        ind.className = "turn-indicator my-turn";
-    } else {
-        ind.innerText = `⏳ දැන් එයාගේ වාරේ (${!isHost ? '❌' : '❤️'})...`;
-        ind.className = "turn-indicator their-turn";
-    }
-}
 
 // --- 1. Memory Match Game ---
 const memoryEmojis = ['🐶', '🍕', '🚀', '🌻', '🎈', '🧸', '💎', '🍓'];
@@ -636,4 +519,219 @@ function updateGuessUI() {
         ind.className = "turn-indicator their-turn";
         document.getElementById('btn-submit-guess').disabled = true;
     }
+}
+
+// --- 6. Tic Tac Toe (❤️ & ❌) ---
+let tttBoard = Array(9).fill(null);
+let tttTurn = 'host';
+let tttGameOver = false;
+let tttHostReady = false;
+let tttGuestReady = false;
+
+const winPatterns = [
+    [0,1,2], [3,4,5], [6,7,8], // rows
+    [0,3,6], [1,4,7], [2,5,8], // cols
+    [0,4,8], [2,4,6]           // diagonals
+];
+
+window.startTicTacToe = function() {
+    sendData({type: 'start-ttt'});
+    initTicTacToe();
+}
+
+function initTicTacToe() {
+    tttBoard = Array(9).fill(null);
+    tttTurn = 'host'; 
+    tttGameOver = false;
+    tttHostReady = false;
+    tttGuestReady = false;
+    
+    showScreen('screen-tictactoe');
+    document.getElementById('ttt-result-box').classList.add('hidden');
+    document.getElementById('ttt-wait-text').classList.add('hidden');
+    document.getElementById('btn-ttt-yes').disabled = false;
+    document.getElementById('btn-ttt-home').classList.add('hidden');
+    
+    const grid = document.getElementById('ttt-grid');
+    grid.innerHTML = '';
+    for(let i=0; i<9; i++) {
+        let cell = document.createElement('div');
+        cell.className = 'ttt-cell';
+        cell.id = `ttt-cell-${i}`;
+        cell.onclick = () => handleTttClick(i);
+        grid.appendChild(cell);
+    }
+    updateTttUI();
+}
+
+function handleTttClick(i) {
+    if(tttGameOver || tttBoard[i] !== null) return;
+    let amI = isHost ? 'host' : 'guest';
+    if(tttTurn !== amI) return window.showToast("දැන් එයාගේ වාරේ!");
+    
+    sendData({type: 'ttt-move', index: i});
+    processTttMove(i);
+}
+
+function processTttMove(i) {
+    tttBoard[i] = tttTurn; 
+    let cell = document.getElementById(`ttt-cell-${i}`);
+    cell.innerText = tttTurn === 'host' ? '❌' : '❤️';
+    cell.classList.add('taken');
+    
+    if (checkTttWin(tttTurn)) {
+        tttGameOver = true;
+        handleTttEnd(tttTurn === (isHost ? 'host' : 'guest') ? 'win' : 'lose', tttTurn);
+    } else if (!tttBoard.includes(null)) {
+        tttGameOver = true;
+        handleTttEnd('draw', null);
+    } else {
+        tttTurn = tttTurn === 'host' ? 'guest' : 'host';
+        updateTttUI();
+    }
+}
+
+function checkTttWin(player) {
+    for(let pattern of winPatterns) {
+        const [a,b,c] = pattern;
+        if(tttBoard[a] === player && tttBoard[b] === player && tttBoard[c] === player) {
+            document.getElementById(`ttt-cell-${a}`).classList.add('win-cell');
+            document.getElementById(`ttt-cell-${b}`).classList.add('win-cell');
+            document.getElementById(`ttt-cell-${c}`).classList.add('win-cell');
+            return true;
+        }
+    }
+    return false;
+}
+
+function handleTttEnd(result, winner) {
+    let text = "";
+    if(result === 'win') text = "🎉 සුපිරි! ඔයා දිනුම්!";
+    else if(result === 'lose') text = "😢 අඩේ! එයා දිනුම්!";
+    else text = "🤝 තරඟය සමයි! (Draw)";
+    
+    document.getElementById('ttt-result-text').innerText = text;
+    document.getElementById('ttt-result-text').style.color = result === 'win' ? '#2b9348' : (result === 'lose' ? '#c1121f' : '#0077b6');
+    document.getElementById('ttt-result-box').classList.remove('hidden');
+    document.getElementById('ttt-turn-indicator').innerText = "🏆 ගේම් ඉවරයි!";
+    document.getElementById('ttt-turn-indicator').className = "turn-indicator my-turn";
+}
+
+window.tttPlayAgain = function() {
+    document.getElementById('btn-ttt-yes').disabled = true;
+    document.getElementById('ttt-wait-text').classList.remove('hidden');
+    
+    if(isHost) tttHostReady = true; else tttGuestReady = true;
+    sendData({type: 'ttt-ready'});
+    
+    checkTttRestart();
+}
+
+function checkTttRestart() {
+    if(tttHostReady && tttGuestReady) {
+        initTicTacToe(); 
+    }
+}
+
+function updateTttUI() {
+    if(tttGameOver) return;
+    let amI = isHost ? 'host' : 'guest';
+    let ind = document.getElementById('ttt-turn-indicator');
+    
+    if(tttTurn === amI) {
+        ind.innerText = `👉 දැන් ඔයාගේ වාරේ (${isHost ? '❌' : '❤️'})`;
+        ind.className = "turn-indicator my-turn";
+    } else {
+        ind.innerText = `⏳ දැන් එයාගේ වාරේ (${!isHost ? '❌' : '❤️'})...`;
+        ind.className = "turn-indicator their-turn";
+    }
+}
+
+// --- 7. Voice Call (WebRTC) ---
+let localStream = null, pc = null, inCall = false;
+let iceQueue = [];
+const pcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+window.toggleCall = async function() {
+    if (inCall) {
+        window.endCall();
+        sendData({type: 'end-call'});
+    } else {
+        initCall();
+    }
+};
+
+async function initCall() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        document.getElementById('btn-call').innerHTML = '<i class="fas fa-phone-slash"></i>';
+        document.getElementById('btn-call').style.background = '#dc3545';
+        inCall = true;
+        window.showToast("📞 ඇමතුම සම්බන්ධ වෙමින් පවතී...");
+
+        pc = new RTCPeerConnection(pcConfig);
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+        pc.ontrack = (event) => { document.getElementById('remote-audio').srcObject = event.streams[0]; };
+        pc.onicecandidate = (event) => {
+            if (event.candidate) sendData({ type: 'ice-candidate', candidate: event.candidate });
+        };
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        sendData({ type: 'call-offer', offer: offer });
+    } catch (e) {
+        window.showToast("⚠️ මයික් එක On කරන්න අවසර දෙන්න!");
+        window.endCall();
+    }
+}
+
+window.handleCallOffer = async function(offer) {
+    if(!inCall) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            inCall = true;
+            document.getElementById('btn-call').innerHTML = '<i class="fas fa-phone-slash"></i>';
+            document.getElementById('btn-call').style.background = '#dc3545';
+            window.showToast("📞 කෝල් එකට සම්බන්ධ වුණා!");
+        } catch(e) { return window.showToast("⚠️ මයික් අවසරය නැහැ!"); }
+    }
+    
+    pc = new RTCPeerConnection(pcConfig);
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    pc.ontrack = (e) => { document.getElementById('remote-audio').srcObject = e.streams[0]; };
+    pc.onicecandidate = (e) => {
+        if (e.candidate) sendData({ type: 'ice-candidate', candidate: e.candidate });
+    };
+    
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    window.flushIceQueue();
+    
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    sendData({ type: 'call-answer', answer: answer });
+}
+
+window.handleIceCandidate = function(candidate) {
+    if(pc && pc.remoteDescription) {
+        pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } else {
+        iceQueue.push(candidate);
+    }
+}
+
+window.flushIceQueue = function() {
+    iceQueue.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)));
+    iceQueue = [];
+}
+
+window.endCall = function() {
+    inCall = false;
+    if(pc) { pc.close(); pc = null; }
+    if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    document.getElementById('btn-call').innerHTML = '<i class="fas fa-phone"></i>';
+    document.getElementById('btn-call').style.background = 'var(--primary)';
+    document.getElementById('remote-audio').srcObject = null;
+    iceQueue = [];
+    window.showToast("📞 ඇමතුම විසන්ධි වුණා.");
 }
