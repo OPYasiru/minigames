@@ -13,6 +13,20 @@ input:focus { border-color: var(--primary); }
 .id-box { background: white; border: 2px dashed var(--primary); padding: 10px; border-radius: 15px; font-size: 32px; font-weight: 700; color: var(--primary); letter-spacing: 5px; margin-bottom: 15px; font-family: monospace; }
 .hidden { display: none !important; }
 
+/* Shake Error Animation */
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    50% { transform: translateX(6px); }
+    75% { transform: translateX(-6px); }
+    100% { transform: translateX(0); }
+}
+.shake-error {
+    animation: shake 0.3s ease-in-out;
+    background-color: #ff99a8 !important; /* පොඩ්ඩක් රතු පාට වෙන්න */
+    border-color: #c1121f !important;
+}
+
 /* Grid Defaults */
 .turn-indicator { font-size: 16px; font-weight: bold; margin-bottom: 10px; padding: 10px; border-radius: 15px; transition: 0.3s; }
 .my-turn { background: #d4edda; color: #155724; border: 2px solid #28a745; }
