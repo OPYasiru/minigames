@@ -47,15 +47,15 @@ onDisconnect(gameRef).remove();
 onValue(statusRef, snap => {
     if(isHost && snap.val() === 'connected') {
         showScreen('screen-lobby');
-        window.showToast('🥰 පාට්නර් එකතු වුණා!');
+        window.showToast('🥰 Partner එකතු වුණා!');
         setupDataHandler();
     }
 });
 
 window.joinGame = function() {
     const enteredId = document.getElementById('join-id').value.trim();
-    if(!enteredId || enteredId.length !== 5) return window.showToast('කරුණාකර ඉලක්කම් 5ක කෝඩ් එකක් දෙන්න!');
-    if(enteredId === gameId) return window.showToast('ඔයාගේ කෝඩ් එකටම සම්බන්ධ වෙන්න බැහැ!');
+    if(!enteredId || enteredId.length !== 5) return window.showToast('කරුණාකර ඉලක්කම් 5ක Code එකක් දෙන්න!');
+    if(enteredId === gameId) return window.showToast('ඔයාගේ Code එකටම සම්බන්ධ වෙන්න බැහැ!');
 
     window.showToast('සම්බන්ධ වෙමින් පවතී... (Please wait)');
     const btn = document.getElementById('join-btn');
@@ -72,11 +72,11 @@ window.joinGame = function() {
             onDisconnect(guestStatusRef).set('disconnected');
             
             showScreen('screen-lobby');
-            document.getElementById('lobby-content').innerHTML = '<h3>🥰 පාට්නර් ගේම් එකක් තෝරනකන් ඉන්න...</h3>';
+            document.getElementById('lobby-content').innerHTML = '<h3>🥰 Partner game එකක් තෝරනකන් ඉන්න...</h3>';
             window.showToast('සාර්ථකව එකතු වුණා!');
             setupDataHandler();
         } else {
-            window.showToast('කෝඩ් එක වැරදියි හෝ පාට්නර් ගේම් එකේ නැහැ!');
+            window.showToast('Code එක වැරදියි හෝ Partner game එකේ නැහැ!');
             btn.innerText = 'Join Game'; 
             btn.disabled = false;
         }
@@ -136,7 +136,7 @@ function setupDataHandler() {
     const activeStatusRef = ref(db, `games/${gameId}/status`);
     onValue(activeStatusRef, snap => {
         if(!snap.exists() || snap.val() === 'disconnected') {
-            alert("පාට්නර් ගේම් එකෙන් අයින් වුණා! කරුණාකර page එක Refresh කරන්න.");
+            alert("Partner game එකෙන් අයින් වුණා! කරුණාකර page එක Refresh කරන්න.");
             location.reload();
         }
     });
@@ -197,12 +197,30 @@ function setReadyState(game, player) {
 }
 
 // --- 1. Memory Match Game ---
-const memoryEmojis = ['🐶', '🍕', '🚀', '🌻', '🎈', '🧸', '💎', '🍓'];
+// --- 1. Memory Match Game ---
+// ලොකු ඉමෝජි ලිස්ට් එකක් මෙතන තියෙනවා
+const allEmojis = ['🐶', '🍕', '🚀', '🌻', '🎈', '🧸', '💎', '🍓', '🚗', '🎮', '🎧', '⚽', '🎸', '🍔', '🍟', '🍦', '🍩', '🍎', '🐱', '🐼', '🦊', '🦁', '🐸', '🦄', '🌞', '🌙', '⭐', '🔥', '💧', '⚡', '👻', '👽'];
+
 let memoryBoard = [], flippedCards = [], matchedCards = [];
 let memoryTurn = 'host', scoreHost = 0, scoreGuest = 0, lockBoard = false;
 
 window.startMemoryMatch = function() {
     if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
+    
+    // ලොකු ලිස්ට් එකෙන් අහඹු ලෙස ඉමෝජි 8ක් තෝරාගැනීම
+    let shuffledEmojis = [...allEmojis].sort(() => 0.5 - Math.random());
+    let selectedEmojis = shuffledEmojis.slice(0, 8);
+    
+    // ඒ 8 දෙගුණ කරලා (16ක් කරලා) බෝඩ් එකට දැමීම
+    memoryBoard = [...selectedEmojis, ...selectedEmojis].sort(() => Math.random() - 0.5);
+    
+    memoryTurn = Math.random() < 0.5 ? 'host' : 'guest';
+    sendData({type: 'start-memory', board: memoryBoard, turn: memoryTurn});
+    initMemoryMatch(memoryBoard, memoryTurn);
+}
+
+window.startMemoryMatch = function() {
+    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
     memoryBoard = [...memoryEmojis, ...memoryEmojis].sort(() => Math.random() - 0.5);
     memoryTurn = Math.random() < 0.5 ? 'host' : 'guest';
     sendData({type: 'start-memory', board: memoryBoard, turn: memoryTurn});
@@ -277,7 +295,7 @@ function processMemoryFlip(i) {
                 let color = scoreHost === scoreGuest ? '#0077b6' : 
                     ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? '#2b9348' : '#c1121f');
                 
-                document.getElementById('mem-turn-indicator').innerText = "🏆 ගේම් ඉවරයි!";
+                document.getElementById('mem-turn-indicator').innerText = "🏆 Game Over!";
                 document.getElementById('mem-turn-indicator').className = "turn-indicator my-turn";
                 document.getElementById('mem-result-text').innerText = winner;
                 document.getElementById('mem-result-text').style.color = color;
@@ -490,7 +508,7 @@ function checkWinLoss() {
             inst.innerText = '😢 බෝම්බ පෑගුනා! ඔයා පැරදුනා.'; 
             resultTxt.innerText = '😢 බෝම්බ පෑගුනා! ඔයා පැරදුනා.'; 
             resultTxt.style.color = '#c1121f';
-            window.showToast('ගේම් ඕවර්! 💔'); 
+            window.showToast('Game Over! 💔'); 
         } else {
             inst.innerText = '🎉 නියමයි! එයා බෝම්බ වලට අහු වුණා.'; 
             resultTxt.innerText = '🎉 නියමයි! එයා බෝම්බ වලට අහු වුණා.'; 
@@ -524,7 +542,7 @@ let availableQuestions = [];
 let currentQIndex = 0, myQuizAns = null, partnerQuizAns = null;
 
 window.startQuiz = function() { 
-    if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); 
+    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); 
     if (availableQuestions.length === 0) {
         availableQuestions = quizQuestions.map((_, index) => index);
         window.showToast("අලුත් වටයක් පටන් ගත්තා! 🔄");
@@ -634,7 +652,7 @@ function initPickSecret(max, turn) {
         <p>1 ත් ${max} ත් අතර ඔයාගේ රහස් ඉලක්කම හිතාගෙන මෙතන ගහන්න! 🤫</p>
         <input type="number" id="secret-input" placeholder="රහස් ඉලක්කම..." style="padding: 12px; border-radius: 15px; border: 2px solid #ffb3c6; text-align: center; font-size: 16px; width: 85%; margin-bottom: 15px; outline: none; background: #fff0f3;">
         <button onclick="submitSecret()">ලෑස්තියි</button>
-        <p id="secret-wait-text" class="hidden" style="color: #2b9348; margin-top: 15px; font-weight: bold;">⏳ පාට්නර් ඉලක්කම හිතනකන් ඉන්න...</p>
+        <p id="secret-wait-text" class="hidden" style="color: #2b9348; margin-top: 15px; font-weight: bold;">⏳ Partner ඉලක්කම හිතනකන් ඉන්න...</p>
     `;
 }
 
@@ -837,7 +855,7 @@ function handleTttEnd(result, winner) {
     document.getElementById('ttt-result-text').innerText = text;
     document.getElementById('ttt-result-text').style.color = result === 'win' ? '#2b9348' : (result === 'lose' ? '#c1121f' : '#0077b6');
     document.getElementById('ttt-result-box').classList.remove('hidden');
-    document.getElementById('ttt-turn-indicator').innerText = "🏆 ගේම් ඉවරයි!";
+    document.getElementById('ttt-turn-indicator').innerText = "🏆 Game Over!";
     document.getElementById('ttt-turn-indicator').className = "turn-indicator my-turn";
 }
 
@@ -859,7 +877,7 @@ function updateTttUI() {
 let huntBoard = [], huntTarget = null, huntScoreH = 0, huntScoreG = 0;
 
 window.startNumberHunt = function() {
-    if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
+    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
     generateHuntRound(0, 0);
 }
 
