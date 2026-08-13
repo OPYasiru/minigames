@@ -197,22 +197,18 @@ function setReadyState(game, player) {
 }
 
 // --- 1. Memory Match Game ---
-// ලොකු ඉමෝජි ලිස්ට් එකක් මෙතන තියෙනවා
 const allEmojis = ['🐶', '🍕', '🚀', '🌻', '🎈', '🧸', '💎', '🍓', '🚗', '🎮', '🎧', '⚽', '🎸', '🍔', '🍟', '🍦', '🍩', '🍎', '🐱', '🐼', '🦊', '🦁', '🐸', '🦄', '🌞', '🌙', '⭐', '🔥', '💧', '⚡', '👻', '👽'];
 
 let memoryBoard = [], flippedCards = [], matchedCards = [];
 let memoryTurn = 'host', scoreHost = 0, scoreGuest = 0, lockBoard = false;
 
 window.startMemoryMatch = function() {
-    if(!isHost) return window.showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
+    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
     
-    // ලොකු ලිස්ට් එකෙන් අහඹු ලෙස ඉමෝජි 8ක් තෝරාගැනීම
     let shuffledEmojis = [...allEmojis].sort(() => 0.5 - Math.random());
     let selectedEmojis = shuffledEmojis.slice(0, 8);
     
-    // ඒ 8 දෙගුණ කරලා (16ක් කරලා) බෝඩ් එකට දැමීම
     memoryBoard = [...selectedEmojis, ...selectedEmojis].sort(() => Math.random() - 0.5);
-    
     memoryTurn = Math.random() < 0.5 ? 'host' : 'guest';
     sendData({type: 'start-memory', board: memoryBoard, turn: memoryTurn});
     initMemoryMatch(memoryBoard, memoryTurn);
@@ -262,37 +258,51 @@ function processMemoryFlip(i) {
         let [idx1, idx2] = flippedCards;
         let isMatch = memoryBoard[idx1] === memoryBoard[idx2];
         
-        setTimeout(() => {
-            if(isMatch) {
+        if(isMatch) {
+            setTimeout(() => {
                 matchedCards.push(idx1, idx2);
                 document.getElementById(`mem-card-${idx1}`).classList.add('matched');
                 document.getElementById(`mem-card-${idx2}`).classList.add('matched');
                 if(memoryTurn === 'host') scoreHost++; else scoreGuest++;
                 window.showToast("නියමයි! ගැලපෙනවා! 🎯");
-            } else {
-                let c1 = document.getElementById(`mem-card-${idx1}`);
-                let c2 = document.getElementById(`mem-card-${idx2}`);
-                c1.classList.remove('flipped'); c1.innerText = '';
-                c2.classList.remove('flipped'); c2.innerText = '';
-                memoryTurn = memoryTurn === 'host' ? 'guest' : 'host';
-            }
-            flippedCards = [];
-            updateMemoryUI();
-            lockBoard = false;
-            
-            if(matchedCards.length === 16) {
-                let winner = scoreHost === scoreGuest ? '🤝 දෙන්නම සමයි (Draw)!' : 
-                    ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? '🎉 ඔයා දිනුම්!' : '😢 එයා දිනුම්!');
-                let color = scoreHost === scoreGuest ? '#0077b6' : 
-                    ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? '#2b9348' : '#c1121f');
                 
-                document.getElementById('mem-turn-indicator').innerText = "🏆 Game Over!";
-                document.getElementById('mem-turn-indicator').className = "turn-indicator my-turn";
-                document.getElementById('mem-result-text').innerText = winner;
-                document.getElementById('mem-result-text').style.color = color;
-                document.getElementById('mem-result-box').classList.remove('hidden');
-            }
-        }, 1200);
+                flippedCards = [];
+                updateMemoryUI();
+                lockBoard = false;
+                checkMemoryWin();
+            }, 600);
+        } else {
+            // Shake Effect on Wrong Match
+            let c1 = document.getElementById(`mem-card-${idx1}`);
+            let c2 = document.getElementById(`mem-card-${idx2}`);
+            c1.classList.add('shake-error');
+            c2.classList.add('shake-error');
+            
+            setTimeout(() => {
+                c1.classList.remove('shake-error', 'flipped'); c1.innerText = '';
+                c2.classList.remove('shake-error', 'flipped'); c2.innerText = '';
+                memoryTurn = memoryTurn === 'host' ? 'guest' : 'host';
+                
+                flippedCards = [];
+                updateMemoryUI();
+                lockBoard = false;
+            }, 800); // 800ms waiting time so players can see the wrong pair & shake effect
+        }
+    }
+}
+
+function checkMemoryWin() {
+    if(matchedCards.length === 16) {
+        let winner = scoreHost === scoreGuest ? '🤝 දෙන්නම සමයි (Draw)!' : 
+            ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? '🎉 ඔයා දිනුම්!' : '😢 එයා දිනුම්!');
+        let color = scoreHost === scoreGuest ? '#0077b6' : 
+            ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? '#2b9348' : '#c1121f');
+        
+        document.getElementById('mem-turn-indicator').innerText = "🏆 Game Over!";
+        document.getElementById('mem-turn-indicator').className = "turn-indicator my-turn";
+        document.getElementById('mem-result-text').innerText = winner;
+        document.getElementById('mem-result-text').style.color = color;
+        document.getElementById('mem-result-box').classList.remove('hidden');
     }
 }
 
@@ -330,7 +340,7 @@ canvas.addEventListener('mousedown', onDown); canvas.addEventListener('mousemove
 canvas.addEventListener('touchstart', onDown, {passive: false}); canvas.addEventListener('touchmove', onMove, {passive: false}); canvas.addEventListener('touchend', onUp);
 window.clearCanvasSync = function() { ctx.clearRect(0, 0, canvas.width, canvas.height); sendData({type: 'clear-pic'}); }
 
-// --- 3. Battleship ---
+// --- 3. Battleship (හදවත් යුද්ධය - Real-Time Update & Shake Fix) ---
 let battleState = { h: [], t: [] }, battleData = { h: [], t: [] }, playStats = { hearts: 0, bombs: 0, done: false };
 let battleHider = null, battleSeeker = null;
 
@@ -459,12 +469,16 @@ function processBattleClick(i) {
         cell.innerHTML = '❤️'; 
         playStats.hearts++; 
     } else if(battleData.t.includes(i)) { 
-        cell.classList.add('revealed-trap'); 
+        // Shake Effect on Bomb
+        cell.classList.add('revealed-trap', 'shake-error'); 
         cell.innerHTML = '💣'; 
         playStats.bombs++;
+        setTimeout(() => cell.classList.remove('shake-error'), 300);
     } else { 
-        cell.classList.add('revealed-empty'); 
+        // Shake Effect on Empty Cloud
+        cell.classList.add('revealed-empty', 'shake-error'); 
         cell.innerHTML = '☁️'; 
+        setTimeout(() => cell.classList.remove('shake-error'), 300);
     } 
     updatePlayUI(); 
     checkWinLoss(); 
@@ -649,7 +663,12 @@ function initPickSecret(max, turn) {
 
 window.submitSecret = function() {
     let val = parseInt(document.getElementById('secret-input').value);
-    if(isNaN(val) || val < 1 || val > guessMax) return window.showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
+    if(isNaN(val) || val < 1 || val > guessMax) {
+        // Shake Error on Setup Number
+        document.getElementById('secret-input').classList.add('shake-error');
+        setTimeout(() => document.getElementById('secret-input').classList.remove('shake-error'), 300);
+        return window.showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
+    }
     
     mySecret = val;
     document.getElementById('secret-input').disabled = true;
@@ -670,7 +689,7 @@ function startGuessingPhase() {
     document.getElementById('guess-play').classList.remove('hidden');
     
     document.getElementById('guess-instruction').innerText = `දැන් එයා හිතපු ඉලක්කම හොයමු! (උපරිමය ${guessMax})`;
-    document.getElementById('guess-hint-text').innerHTML = "ඔයාගේ ගෙස් එක ගහන්න 👇";
+    document.getElementById('guess-hint-text').innerHTML = "ඔයාගේ Guess එක ගහන්න 👇";
     document.getElementById('guess-hint-text').style.color = "#590d22";
     document.getElementById('partner-hint-text').innerHTML = ""; 
     document.getElementById('guess-input').value = '';
@@ -683,13 +702,21 @@ window.submitGuess = function() {
     if(guessTurn !== amI || isGuessGameOver) return window.showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
     
     let myGuess = parseInt(document.getElementById('guess-input').value);
-    if(isNaN(myGuess) || myGuess < 1 || myGuess > guessMax) return window.showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
+    if(isNaN(myGuess) || myGuess < 1 || myGuess > guessMax) {
+        document.getElementById('guess-input').classList.add('shake-error');
+        setTimeout(() => document.getElementById('guess-input').classList.remove('shake-error'), 300);
+        return window.showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
+    }
     
     document.getElementById('guess-input').value = '';
     
     if(myGuess === partnerSecret) {
         handleWin(amI);
     } else {
+        // Shake Effect on Wrong Guess
+        document.getElementById('guess-input').classList.add('shake-error');
+        setTimeout(() => document.getElementById('guess-input').classList.remove('shake-error'), 300);
+        
         let hintText = document.getElementById('guess-hint-text');
         if(myGuess < partnerSecret) {
             hintText.innerHTML = `⬆️ මදි! එයා හිතපු ඉලක්කම <b>${myGuess}</b> ට වඩා වැඩියි!`;
@@ -904,13 +931,14 @@ function initHuntBoard(board, target, scoreH, scoreG) {
     for(let i=0; i<25; i++) {
         let cell = document.createElement('div');
         cell.className = 'h-cell';
+        cell.id = 'hcell-' + i;
         cell.innerText = board[i];
-        cell.onclick = () => handleHuntClick(board[i]);
+        cell.onclick = () => handleHuntClick(board[i], i);
         grid.appendChild(cell);
     }
 }
 
-function handleHuntClick(num) {
+function handleHuntClick(num, idx) {
     if(num === huntTarget) {
         if(isHost) {
             generateHuntRound(huntScoreH + 1, huntScoreG);
@@ -918,6 +946,12 @@ function handleHuntClick(num) {
             sendData({type: 'hunt-click', num: num});
         }
     } else {
+        // Shake Effect on Wrong Number Click
+        let cell = document.getElementById('hcell-' + idx);
+        if (cell) {
+            cell.classList.add('shake-error');
+            setTimeout(() => cell.classList.remove('shake-error'), 300);
+        }
         window.showToast("❌ වැරදියි! ආයේ බලන්න.");
     }
 }
