@@ -19,7 +19,7 @@ const db = getDatabase(app);
 let gameId = Math.floor(10000 + Math.random() * 90000).toString();
 let isHost = true;
 
-const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-setup', 'screen-battleship-play', 'screen-quiz', 'screen-memory', 'screen-guess'];
+const screens = ['screen-connect', 'screen-lobby', 'screen-pictionary', 'screen-battleship-setup', 'screen-battleship-play', 'screen-quiz', 'screen-memory', 'screen-guess', 'screen-tictactoe'];
 
 function showScreen(id) { 
     screens.forEach(s => document.getElementById(s).classList.add('hidden')); 
@@ -115,12 +115,20 @@ function setupDataHandler() {
         else if(data.type === 'start-memory') { if(!isHost) initMemoryMatch(data.board); }
         else if(data.type === 'memory-flip') processMemoryFlip(data.index);
         
-        // Guess the Number Handlers
+        // Guess the Number
         else if(data.type === 'start-guess-setup') { if(!isHost) window.openGuessGuestWaiting(); }
         else if(data.type === 'guess-range') { initPickSecret(data.max); }
         else if(data.type === 'guess-secret') { partnerSecret = data.secret; checkBothSecrets(); }
         else if(data.type === 'guess-try') { processPartnerGuess(data.guess); }
         else if(data.type === 'guess-win') { handleWin(isHost ? 'guest' : 'host'); }
+
+        // Tic Tac Toe
+        else if(data.type === 'start-ttt') { if(!isHost) initTicTacToe(); }
+        else if(data.type === 'ttt-move') { processTttMove(data.index); }
+        else if(data.type === 'ttt-ready') {
+            if(isHost) tttGuestReady = true; else tttHostReady = true;
+            checkTttRestart();
+        }
     });
 
     const activeStatusRef = ref(db, `games/${gameId}/status`);
@@ -133,6 +141,132 @@ function setupDataHandler() {
 }
 
 window.goLobby = function() { showScreen('screen-lobby'); sendData({type: 'go-lobby'}); }
+
+// --- 6. Tic Tac Toe (❤️ & ❌) ---
+let tttBoard = Array(9).fill(null);
+let tttTurn = 'host';
+let tttGameOver = false;
+let tttHostReady = false;
+let tttGuestReady = false;
+
+const winPatterns = [
+    [0,1,2], [3,4,5], [6,7,8], // rows
+    [0,3,6], [1,4,7], [2,5,8], // cols
+    [0,4,8], [2,4,6]           // diagonals
+];
+
+window.startTicTacToe = function() {
+    sendData({type: 'start-ttt'});
+    initTicTacToe();
+}
+
+function initTicTacToe() {
+    tttBoard = Array(9).fill(null);
+    tttTurn = 'host'; 
+    tttGameOver = false;
+    tttHostReady = false;
+    tttGuestReady = false;
+    
+    showScreen('screen-tictactoe');
+    document.getElementById('ttt-result-box').classList.add('hidden');
+    document.getElementById('ttt-wait-text').classList.add('hidden');
+    document.getElementById('btn-ttt-yes').disabled = false;
+    document.getElementById('btn-ttt-home').classList.add('hidden');
+    
+    const grid = document.getElementById('ttt-grid');
+    grid.innerHTML = '';
+    for(let i=0; i<9; i++) {
+        let cell = document.createElement('div');
+        cell.className = 'ttt-cell';
+        cell.id = `ttt-cell-${i}`;
+        cell.onclick = () => handleTttClick(i);
+        grid.appendChild(cell);
+    }
+    updateTttUI();
+}
+
+function handleTttClick(i) {
+    if(tttGameOver || tttBoard[i] !== null) return;
+    let amI = isHost ? 'host' : 'guest';
+    if(tttTurn !== amI) return window.showToast("දැන් එයාගේ වාරේ!");
+    
+    sendData({type: 'ttt-move', index: i});
+    processTttMove(i);
+}
+
+function processTttMove(i) {
+    tttBoard[i] = tttTurn; 
+    let cell = document.getElementById(`ttt-cell-${i}`);
+    cell.innerText = tttTurn === 'host' ? '❌' : '❤️';
+    cell.classList.add('taken');
+    
+    if (checkTttWin(tttTurn)) {
+        tttGameOver = true;
+        handleTttEnd(tttTurn === (isHost ? 'host' : 'guest') ? 'win' : 'lose', tttTurn);
+    } else if (!tttBoard.includes(null)) {
+        tttGameOver = true;
+        handleTttEnd('draw', null);
+    } else {
+        tttTurn = tttTurn === 'host' ? 'guest' : 'host';
+        updateTttUI();
+    }
+}
+
+function checkTttWin(player) {
+    for(let pattern of winPatterns) {
+        const [a,b,c] = pattern;
+        if(tttBoard[a] === player && tttBoard[b] === player && tttBoard[c] === player) {
+            document.getElementById(`ttt-cell-${a}`).classList.add('win-cell');
+            document.getElementById(`ttt-cell-${b}`).classList.add('win-cell');
+            document.getElementById(`ttt-cell-${c}`).classList.add('win-cell');
+            return true;
+        }
+    }
+    return false;
+}
+
+function handleTttEnd(result, winner) {
+    let text = "";
+    if(result === 'win') text = "🎉 සුපිරි! ඔයා දිනුම්!";
+    else if(result === 'lose') text = "😢 අඩේ! එයා දිනුම්!";
+    else text = "🤝 තරඟය සමයි! (Draw)";
+    
+    document.getElementById('ttt-result-text').innerText = text;
+    document.getElementById('ttt-result-text').style.color = result === 'win' ? '#2b9348' : (result === 'lose' ? '#c1121f' : '#0077b6');
+    document.getElementById('ttt-result-box').classList.remove('hidden');
+    document.getElementById('ttt-turn-indicator').innerText = "🏆 ගේම් ඉවරයි!";
+    document.getElementById('ttt-turn-indicator').className = "turn-indicator my-turn";
+}
+
+window.tttPlayAgain = function() {
+    document.getElementById('btn-ttt-yes').disabled = true;
+    document.getElementById('ttt-wait-text').classList.remove('hidden');
+    
+    if(isHost) tttHostReady = true; else tttGuestReady = true;
+    sendData({type: 'ttt-ready'});
+    
+    checkTttRestart();
+}
+
+function checkTttRestart() {
+    if(tttHostReady && tttGuestReady) {
+        initTicTacToe(); 
+    }
+}
+
+function updateTttUI() {
+    if(tttGameOver) return;
+    let amI = isHost ? 'host' : 'guest';
+    let ind = document.getElementById('ttt-turn-indicator');
+    
+    if(tttTurn === amI) {
+        ind.innerText = `👉 දැන් ඔයාගේ වාරේ (${isHost ? '❌' : '❤️'})`;
+        ind.className = "turn-indicator my-turn";
+    } else {
+        ind.innerText = `⏳ දැන් එයාගේ වාරේ (${!isHost ? '❌' : '❤️'})...`;
+        ind.className = "turn-indicator their-turn";
+    }
+}
 
 // --- 1. Memory Match Game ---
 const memoryEmojis = ['🐶', '🍕', '🚀', '🌻', '🎈', '🧸', '💎', '🍓'];
