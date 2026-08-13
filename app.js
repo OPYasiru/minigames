@@ -132,18 +132,6 @@ function setupDataHandler() {
             if(isHost) tttGuestReady = true; else tttHostReady = true;
             checkTttRestart();
         }
-
-        // Voice Call
-        else if(data.type === 'call-offer') { window.handleCallOffer(data.offer); }
-        else if(data.type === 'call-answer') { 
-            if(pc) {
-                pc.setRemoteDescription(new RTCSessionDescription(data.answer))
-                  .then(() => window.flushIceQueue())
-                  .catch(e => console.error(e));
-            }
-        }
-        else if(data.type === 'ice-candidate') { window.handleIceCandidate(data.candidate); }
-        else if(data.type === 'end-call') { window.endCall(); }
     });
 
     const activeStatusRef = ref(db, `games/${gameId}/status`);
@@ -653,36 +641,43 @@ function updateTttUI() {
     }
 }
 
-// --- 7. Voice Call (Jitsi Meet API - 100% Working) ---
+// --- 7. Voice Call (Jitsi Meet - Floating Window Fix) ---
 let jitsiApi = null;
 
 window.toggleCall = function() {
+    let container = document.getElementById('jitsi-container');
+    
     if (jitsiApi) {
         // කෝල් එක කට් කිරීම
         jitsiApi.dispose();
         jitsiApi = null;
+        container.classList.add('hidden');
         document.getElementById('btn-call').innerHTML = '<i class="fas fa-phone"></i>';
         document.getElementById('btn-call').style.background = '#ff4d6d';
         window.showToast("📞 ඇමතුම විසන්ධි වුණා.");
     } else {
         // කෝල් එක ගැනීම
+        container.classList.remove('hidden');
+        container.innerHTML = ''; // පරණ ඒවා මකන්න
         document.getElementById('btn-call').innerHTML = '<i class="fas fa-phone-slash"></i>';
         document.getElementById('btn-call').style.background = '#dc3545';
         window.showToast("📞 කෝල් එකට සම්බන්ධ වෙමින් පවතී...");
 
         const domain = 'meet.jit.si';
         const options = {
-            roomName: 'CoupleGameRoom_' + gameId, // මේ ගේම් අංකෙට විතරක් වෙනම රූම් එකක් හැදෙනවා
-            width: 0,
-            height: 0,
-            parentNode: document.querySelector('body'),
+            roomName: 'CoupleGameRoomVoice_' + gameId, // මේ ගේම් එකට විතරක් වෙන් වුණු කෝල් එකක්
+            width: '100%',
+            height: '100%',
+            parentNode: container,
             configOverwrite: { 
                 startWithVideoMuted: true, // Video ඕනෙ නෑ
                 startWithAudioMuted: false,
-                prejoinPageEnabled: false // කෙලින්ම කෝල් එකට යනවා
+                prejoinPageEnabled: false, // කෙලින්ම කෝල් එකට යනවා
+                disableDeepLinking: true
             },
             interfaceConfigOverwrite: {
-                SHOW_JITSI_WATERMARK: false
+                SHOW_JITSI_WATERMARK: false,
+                TOOLBAR_BUTTONS: ['microphone'] // මයික් එක විතරක් පෙන්නන්න
             }
         };
         
@@ -690,7 +685,7 @@ window.toggleCall = function() {
         
         jitsiApi.addEventListeners({
             videoConferenceJoined: function() {
-                window.showToast("📞 ඇමතුම සාර්ථකයි! කතා කරන්න.");
+                window.showToast("📞 ඇමතුම සාර්ථකයි! මයික් එක Allow කරන්න.");
             }
         });
     }
