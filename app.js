@@ -529,9 +529,9 @@ let tttHostReady = false;
 let tttGuestReady = false;
 
 const winPatterns = [
-    [0,1,2], [3,4,5], [6,7,8], // rows
-    [0,3,6], [1,4,7], [2,5,8], // cols
-    [0,4,8], [2,4,6]           // diagonals
+    [0,1,2], [3,4,5], [6,7,8], 
+    [0,3,6], [1,4,7], [2,5,8], 
+    [0,4,8], [2,4,6]           
 ];
 
 window.startTicTacToe = function() {
@@ -647,10 +647,31 @@ function updateTttUI() {
     }
 }
 
-// --- 7. Voice Call (WebRTC) ---
+// --- 7. Voice Call (WebRTC with TURN Servers) ---
 let localStream = null, pc = null, inCall = false;
 let iceQueue = [];
-const pcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+// මේක තමයි කෝල් බ්ලොක් නොවෙන්න දාපු අලුත් Server සෙට් එක
+const pcConfig = { 
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        }
+    ] 
+};
 
 window.toggleCall = async function() {
     if (inCall) {
