@@ -197,7 +197,6 @@ function setReadyState(game, player) {
 }
 
 // --- 1. Memory Match Game ---
-// --- 1. Memory Match Game ---
 // ලොකු ඉමෝජි ලිස්ට් එකක් මෙතන තියෙනවා
 const allEmojis = ['🐶', '🍕', '🚀', '🌻', '🎈', '🧸', '💎', '🍓', '🚗', '🎮', '🎧', '⚽', '🎸', '🍔', '🍟', '🍦', '🍩', '🍎', '🐱', '🐼', '🦊', '🦁', '🐸', '🦄', '🌞', '🌙', '⭐', '🔥', '💧', '⚡', '👻', '👽'];
 
@@ -214,14 +213,6 @@ window.startMemoryMatch = function() {
     // ඒ 8 දෙගුණ කරලා (16ක් කරලා) බෝඩ් එකට දැමීම
     memoryBoard = [...selectedEmojis, ...selectedEmojis].sort(() => Math.random() - 0.5);
     
-    memoryTurn = Math.random() < 0.5 ? 'host' : 'guest';
-    sendData({type: 'start-memory', board: memoryBoard, turn: memoryTurn});
-    initMemoryMatch(memoryBoard, memoryTurn);
-}
-
-window.startMemoryMatch = function() {
-    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
-    memoryBoard = [...memoryEmojis, ...memoryEmojis].sort(() => Math.random() - 0.5);
     memoryTurn = Math.random() < 0.5 ? 'host' : 'guest';
     sendData({type: 'start-memory', board: memoryBoard, turn: memoryTurn});
     initMemoryMatch(memoryBoard, memoryTurn);
@@ -339,7 +330,7 @@ canvas.addEventListener('mousedown', onDown); canvas.addEventListener('mousemove
 canvas.addEventListener('touchstart', onDown, {passive: false}); canvas.addEventListener('touchmove', onMove, {passive: false}); canvas.addEventListener('touchend', onUp);
 window.clearCanvasSync = function() { ctx.clearRect(0, 0, canvas.width, canvas.height); sendData({type: 'clear-pic'}); }
 
-// --- 3. Battleship (හදවත් යුද්ධය - Real-Time Update Fix) ---
+// --- 3. Battleship ---
 let battleState = { h: [], t: [] }, battleData = { h: [], t: [] }, playStats = { hearts: 0, bombs: 0, done: false };
 let battleHider = null, battleSeeker = null;
 
