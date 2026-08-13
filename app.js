@@ -266,11 +266,81 @@ const quizQuestions = [
     "වලියක් ගියාම කවුද මුලින්ම sorry කියන්නේ? 🥺", "කවුද බොරුවට තරහ අරන් බලන් ඉන්නේ? 😤", "කවුද වැඩියෙන්ම රොමෑන්ටික්? 🥰",
     "කවුද ලස්සනටම අඳින්නේ පලඳින්නේ? 👗", "ෆිල්ම් එකක් බලද්දි වැඩියෙන්ම අඬන්නේ කවුද? 😭", "කෑම තෝරන්නේ කවුද? 😒",
     "කවුද වැඩියෙන්ම සර්ප්‍රයිස් දෙන්න දක්ෂ? 🎁", "අනාගතේ ගැන වැඩියෙන්ම ප්ලෑන් කරන්නේ කවුද? 🏡", "කවුද දේවල් ඉක්මනටම අමතක කරන්නේ? 🧠",
-    "කවුද රහස් රකින්න වැඩියෙන්ම දක්ෂ? 🤫", "නානකාමරේ වැඩියෙන්ම සිංදු කියන්නේ කවුද? 🚿", "කවුද වැඩියෙන්ම ට්‍රිප් යන්න ආස? 🚗"
+    "කවුද රහස් රකින්න වැඩියෙන්ම දක්ෂ? 🤫", "නානකාමරේ වැඩියෙන්ම සිංදු කියන්නේ කවුද? 🚿", "කවුද වැඩියෙන්ම ට්‍රිප් යන්න ආස? 🚗",
+    "කවුද වැඩියෙන්ම කම්මැලි? 🥱", "කවුද ඉක්මනටම ලෙඩ වෙන්නේ? 🤒", "කවුද ගොඩක් වෙලා කණ්ණාඩිය ඉස්සරහ ඉන්නේ? 🪞",
+    "කවුද වැඩියෙන්ම ෂොපින් යන්න ආස? 🛍️", "කවුද වැඩියෙන්ම කතා කරන්නේ (වෙහෙසක් නැතුව)? 🗣️", "කවුද වැඩියෙන්ම කෝපි/තේ බොන්නේ? ☕",
+    "කවුද ගෙදර වැඩ වලට වැඩියෙන්ම උදව් කරන්නේ? 🧹", "කවුද වැඩියෙන්ම ළමයින්ට ආදරේ? 👶", "කවුද සත්තුන්ට වැඩියෙන්ම ආදරේ? 🐶",
+    "කවුද වැඩියෙන්ම ජෝක්ස් කරන්නේ? 😂", "කවුද ඉක්මනටම බය වෙන්නේ? 👻", "කවුද ගොඩක්ම පිරිසිදුවට ඉන්න ආස? 🧼",
+    "කවුද රෑට ගෙරවන්නේ? 💤", "කවුද මුලින්ම මැසේජ් කරන්නේ/රිප්ලයි කරන්නේ? 💬", "කවුද වැඩියෙන්ම චොකලට්/පැණිරස කන්න ආස? 🍫",
+    "කවුද වැඩියෙන්ම ගේම්ස් ගහන්නේ? 🎮", "කවුද වැඩියෙන්ම ටික්ටොක්/යූටියුබ් බලන්නේ? 🎬", "කවුද පොඩි දේටත් ඉක්මනටම අඬන්නේ? 😢",
+    "කවුද වැඩියෙන්ම ඊර්ෂ්‍යා කරන්නේ? 😒", "කවුද වැඩියෙන්ම සිංදු අහන්න ආස? 🎧", "කවුද වැඩියෙන්ම කෑම උයන්න දක්ෂ? 👨‍🍳",
+    "කවුද වැඩියෙන්ම පාටි වලට යන්න ආස? 🥳", "කවුද වැඩියෙන්ම පරණ දේවල් මතක තියාගෙන ඉන්නේ? 🕰️", "කවුද වැඩියෙන්ම දවල් හීන දකින්නේ? 💭",
+    "කවුද නිතරම මොනවා හරි අමතක කරලා හොයන්නේ? 🔎", "කවුද අමාරු වෙලාවක වැඩියෙන්ම හයියක් වෙන්නේ? 💪", "කවුද වැඩියෙන්ම වාහන පදවන්න ආස/දක්ෂ? 🏎️",
+    "කවුද වැඩියෙන්ම ෆොටෝස් වලට පෝස් දෙන්න දක්ෂ? 🕺", "කවුද නිතරම අනිත් කෙනාව හිනස්සන්නේ? 😁"
 ];
+
+let availableQuestions = [];
 let currentQIndex = 0, myQuizAns = null, partnerQuizAns = null;
-window.startQuiz = function() { if(!isHost) return showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); currentQIndex = Math.floor(Math.random() * quizQuestions.length); sendData({type: 'start-quiz', qIndex: currentQIndex}); initQuiz(currentQIndex); }
-function initQuiz(qIndex) { currentQIndex = qIndex; myQuizAns = null; partnerQuizAns = null; showScreen('screen-quiz'); document.getElementById('quiz-q-text').innerText = quizQuestions[qIndex]; document.getElementById('quiz-question-container').classList.remove('hidden'); document.getElementById('quiz-waiting').classList.add('hidden'); document.getElementById('quiz-result').classList.add('hidden'); document.getElementById('btn-next-quiz').classList.add('hidden'); }
-window.submitQuizAns = function(ans) { let absoluteAns = isHost ? (ans === 'me' ? 'host' : 'guest') : (ans === 'me' ? 'guest' : 'host'); myQuizAns = absoluteAns; sendData({type: 'quiz-ans', ans: absoluteAns}); document.getElementById('quiz-question-container').classList.add('hidden'); checkQuizResults(); }
-function checkQuizResults() { if(myQuizAns && partnerQuizAns) { document.getElementById('quiz-waiting').classList.add('hidden'); document.getElementById('quiz-result').classList.remove('hidden'); let resTitle = document.getElementById('quiz-result-title'); let resDetail = document.getElementById('quiz-result-detail'); if(myQuizAns === partnerQuizAns) { resTitle.innerText = "🎉 දෙන්නම එකඟයි!"; resTitle.style.color = "#2b9348"; let who = (isHost && myQuizAns === 'guest') || (!isHost && myQuizAns === 'host') ? "එයා" : "ඔයා"; resDetail.innerText = `දෙන්නම පිළිගත්තා වැඩියෙන්ම ඒ දේ කරන්නේ '${who}' කියලා! 😂❤️`; } else { resTitle.innerText = "⚔️ දෙන්නට දෙකක්!"; resTitle.style.color = "#c1121f"; resDetail.innerText = "මෙතන නම් ලොකු වලියක් යයි වගේ! 😅 දෙන්නම කියන්නේ අනිත් කෙනා කියලා."; } if(isHost) { document.getElementById('btn-next-quiz').classList.remove('hidden'); } } else if (myQuizAns) { document.getElementById('quiz-waiting').classList.remove('hidden'); } }
+
+window.startQuiz = function() { 
+    if(!isHost) return showToast("ගේම් එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); 
+    
+    // ප්‍රශ්න ඔක්කොම අහලා ඉවර නම්, ආයෙත් ලිස්ට් එක පුරවනවා (අලුත් වටයක්)
+    if (availableQuestions.length === 0) {
+        availableQuestions = quizQuestions.map((_, index) => index);
+        showToast("අලුත් වටයක් පටන් ගත්තා! 🔄");
+    }
+
+    // ඉතුරු වෙලා තියෙන ප්‍රශ්න වලින් අහඹු ප්‍රශ්නයක් තෝරනවා
+    const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+    currentQIndex = availableQuestions[randomIndex];
+
+    // තෝරගත්ත ප්‍රශ්නය ලිස්ට් එකෙන් අයින් කරනවා (ආයෙත් නොඑන්න)
+    availableQuestions.splice(randomIndex, 1);
+
+    sendData({type: 'start-quiz', qIndex: currentQIndex}); 
+    initQuiz(currentQIndex); 
+}
+
+function initQuiz(qIndex) { 
+    currentQIndex = qIndex; myQuizAns = null; partnerQuizAns = null; 
+    showScreen('screen-quiz'); 
+    document.getElementById('quiz-q-text').innerText = quizQuestions[qIndex]; 
+    document.getElementById('quiz-question-container').classList.remove('hidden'); 
+    document.getElementById('quiz-waiting').classList.add('hidden'); 
+    document.getElementById('quiz-result').classList.add('hidden'); 
+    document.getElementById('btn-next-quiz').classList.add('hidden'); 
+}
+
+window.submitQuizAns = function(ans) { 
+    let absoluteAns = isHost ? (ans === 'me' ? 'host' : 'guest') : (ans === 'me' ? 'guest' : 'host'); 
+    myQuizAns = absoluteAns; 
+    sendData({type: 'quiz-ans', ans: absoluteAns}); 
+    document.getElementById('quiz-question-container').classList.add('hidden'); 
+    checkQuizResults(); 
+}
+
+function checkQuizResults() { 
+    if(myQuizAns && partnerQuizAns) { 
+        document.getElementById('quiz-waiting').classList.add('hidden'); 
+        document.getElementById('quiz-result').classList.remove('hidden'); 
+        let resTitle = document.getElementById('quiz-result-title'); 
+        let resDetail = document.getElementById('quiz-result-detail'); 
+        
+        if(myQuizAns === partnerQuizAns) { 
+            resTitle.innerText = "🎉 දෙන්නම එකඟයි!"; 
+            resTitle.style.color = "#2b9348"; 
+            let who = (isHost && myQuizAns === 'guest') || (!isHost && myQuizAns === 'host') ? "එයා" : "ඔයා"; 
+            resDetail.innerText = `දෙන්නම පිළිගත්තා වැඩියෙන්ම ඒ දේ කරන්නේ '${who}' කියලා! 😂❤️`; 
+        } else { 
+            resTitle.innerText = "⚔️ දෙන්නට දෙකක්!"; 
+            resTitle.style.color = "#c1121f"; 
+            resDetail.innerText = "මෙතන නම් ලොකු වලියක් යයි වගේ! 😅 දෙන්නම කියන්නේ අනිත් කෙනා කියලා."; 
+        } 
+        if(isHost) { document.getElementById('btn-next-quiz').classList.remove('hidden'); } 
+    } else if (myQuizAns) { 
+        document.getElementById('quiz-waiting').classList.remove('hidden'); 
+    } 
+}
+
 window.nextQuizQ = function() { window.startQuiz(); }
