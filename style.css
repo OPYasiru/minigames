@@ -23,7 +23,7 @@ input:focus { border-color: var(--primary); }
 }
 .shake-error {
     animation: shake 0.3s ease-in-out;
-    background-color: #ff99a8 !important; /* පොඩ්ඩක් රතු පාට වෙන්න */
+    background-color: #ff99a8 !important;
     border-color: #c1121f !important;
 }
 
