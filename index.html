@@ -44,6 +44,7 @@
             <button onclick="startMemoryMatch()">🃏 මතක ගැලපීම (Memory Match)</button>
             <button onclick="startQuiz()">🤔 කවුද වැඩියෙන්ම? (Quiz)</button>
             <button onclick="startBattleship()">❤️‍🔥 හදවත් යුද්ධය (Battleship)</button>
+            <button onclick="openGuessSetup()">🔢 ඉලක්කම හොයමු (Guess the Number)</button>
             <button onclick="startPictionary()">🎨 චිත්‍ර අඳිමු (Pictionary)</button>
         </div>
     </div>
@@ -115,6 +116,48 @@
             <button id="btn-next-quiz" onclick="nextQuizQ()" class="hidden">ඊළඟ ප්‍රශ්නය ➡️</button>
         </div>
         <button class="secondary" onclick="goLobby()" style="margin-top: 20px;"><i class="fas fa-home"></i> Home</button>
+    </div>
+
+    <!-- Guess the Number -->
+    <div id="screen-guess" class="card hidden">
+        <h2>🔢 ඉලක්කම හොයමු</h2>
+        
+        <!-- Host Setup -->
+        <div id="guess-setup" class="hidden">
+            <p>කීයට අඩු ඉලක්කමක්ද හංගන්න ඕනේ?</p>
+            <select id="guess-max-limit" style="padding: 12px; width: 85%; margin-bottom: 20px; border-radius: 15px; border: 2px solid #ffb3c6; text-align: center; font-size: 16px; font-weight: bold; color: #590d22; outline: none;">
+                <option value="50">1 ත් 50 ත් අතර</option>
+                <option value="100" selected>1 ත් 100 ත් අතර</option>
+                <option value="500">1 ත් 500 ත් අතර</option>
+                <option value="1000">1 ත් 1000 ත් අතර</option>
+            </select>
+            <button onclick="startGameGuess()">ගේම් එක පටන්ගන්න</button>
+        </div>
+        
+        <!-- Guest Waiting -->
+        <div id="guess-waiting" class="hidden">
+            <div class="result-box">
+                <h3>⏳ පොඩ්ඩක් ඉන්න...</h3>
+                <p>Host ඉලක්කම හංගනකන් ඉන්න.</p>
+            </div>
+        </div>
+        
+        <!-- Gameplay -->
+        <div id="guess-play" class="hidden">
+            <p id="guess-instruction" style="font-weight: bold; font-size: 17px; color: #ff4d6d;">මම ඉලක්කමක් හිතුවා!</p>
+            <div id="guess-turn-indicator" class="turn-indicator"></div>
+            
+            <div class="result-box" id="guess-hint-box" style="margin-top: 15px;">
+                <h3 id="guess-hint-text" style="color: #590d22;">මුලින්ම ඔයාගේ ඉලක්කම ගහන්න 👇</h3>
+            </div>
+            
+            <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+                <input type="number" id="guess-input" placeholder="ඉලක්කම..." style="width: 50%; margin-bottom: 0;">
+                <button id="btn-submit-guess" onclick="submitGuess()" style="width: 35%; margin: 0; padding: 10px;">Check</button>
+            </div>
+            
+            <button class="secondary hidden" id="btn-guess-home" onclick="goLobby()" style="margin-top: 25px;"><i class="fas fa-home"></i> Home</button>
+        </div>
     </div>
 
     <!-- JavaScript එක ලින්ක් කිරීම (Modular) -->
