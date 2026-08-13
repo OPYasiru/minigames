@@ -1,6 +1,26 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, push, onChildAdded, onDisconnect, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
+// --- 🌟 Magic Link Custom Names Logic ---
+const urlParams = new URLSearchParams(window.location.search);
+const userParam = urlParams.get('user');
+
+let myName = "මම";
+let partnerName = "එයා";
+
+if (userParam === 'rash') {
+    myName = "රශ්";
+    partnerName = "ප්‍රබෝධි";
+} else if (userParam === 'prabodi') {
+    myName = "ප්‍රබෝධි";
+    partnerName = "රශ්";
+}
+
+// HTML එකේ තියෙන නම් ඔටෝම update කිරීම
+document.querySelectorAll('.my-name-label').forEach(el => el.innerText = myName);
+document.querySelectorAll('.partner-name-label').forEach(el => el.innerText = partnerName);
+
+
 // 🛑 ඔයාගේ FIREBASE CONFIG 🛑
 const firebaseConfig = {
     apiKey: "AIzaSyDpK3gJkai7LtAT35h5XjX1CysTIkDh1X4",
@@ -47,7 +67,7 @@ onDisconnect(gameRef).remove();
 onValue(statusRef, snap => {
     if(isHost && snap.val() === 'connected') {
         showScreen('screen-lobby');
-        window.showToast('🥰 Partner එකතු වුණා!');
+        window.showToast(`🥰 ${partnerName} එකතු වුණා!`);
         setupDataHandler();
     }
 });
@@ -72,7 +92,7 @@ window.joinGame = function() {
             onDisconnect(guestStatusRef).set('disconnected');
             
             showScreen('screen-lobby');
-            document.getElementById('lobby-content').innerHTML = '<h3>🥰 Partner game එකක් තෝරනකන් ඉන්න...</h3>';
+            document.getElementById('lobby-content').innerHTML = `<h3>🥰 ${partnerName} game එකක් තෝරනකන් ඉන්න...</h3>`;
             window.showToast('සාර්ථකව එකතු වුණා!');
             setupDataHandler();
         } else {
@@ -136,7 +156,7 @@ function setupDataHandler() {
     const activeStatusRef = ref(db, `games/${gameId}/status`);
     onValue(activeStatusRef, snap => {
         if(!snap.exists() || snap.val() === 'disconnected') {
-            alert("Partner game එකෙන් අයින් වුණා! කරුණාකර page එක Refresh කරන්න.");
+            alert(`${partnerName} game එකෙන් අයින් වුණා! කරුණාකර page එක Refresh කරන්න.`);
             location.reload();
         }
     });
@@ -156,6 +176,7 @@ let playAgainStatus = {
 window.requestPlayAgain = function(game) {
     let amI = isHost ? 'host' : 'guest';
     document.getElementById(`btn-${game}-yes`).disabled = true;
+    document.getElementById(`${game}-wait-text`).innerText = `⏳ ${partnerName} කැමති වෙනකන් ඉන්න...`;
     document.getElementById(`${game}-wait-text`).classList.remove('hidden');
     sendData({type: 'play-again', game: game, senderTurn: amI});
     setReadyState(game, amI);
@@ -178,7 +199,7 @@ function setReadyState(game, player) {
             } else {
                 showScreen('screen-battleship-wait');
                 document.getElementById('battle-wait-h3').innerText = "⏳ පොඩ්ඩක් ඉන්න...";
-                document.getElementById('battle-wait-p').innerText = "Host ඊළඟ වටය හදනකන් ඉන්න.";
+                document.getElementById('battle-wait-p').innerText = `${partnerName} ඊළඟ වටය හදනකන් ඉන්න.`;
             }
         }
         else if(game === 'guess') { 
@@ -203,7 +224,7 @@ let memoryBoard = [], flippedCards = [], matchedCards = [];
 let memoryTurn = 'host', scoreHost = 0, scoreGuest = 0, lockBoard = false;
 
 window.startMemoryMatch = function() {
-    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
+    if(!isHost) return window.showToast(`Game එක හැදුව කෙනාට කියන්න පටන්ගන්න කියලා!`);
     
     let shuffledEmojis = [...allEmojis].sort(() => 0.5 - Math.random());
     let selectedEmojis = shuffledEmojis.slice(0, 8);
@@ -241,7 +262,7 @@ function initMemoryMatch(board, turn) {
 function handleMemoryClick(i) {
     if(lockBoard || flippedCards.includes(i) || matchedCards.includes(i)) return;
     let amI = isHost ? 'host' : 'guest';
-    if(memoryTurn !== amI) return window.showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
+    if(memoryTurn !== amI) return window.showToast(`දැන් ${partnerName}ගේ වාරේ! පොඩ්ඩක් ඉන්න.`);
     
     sendData({type: 'memory-flip', index: i});
     processMemoryFlip(i);
@@ -286,7 +307,7 @@ function processMemoryFlip(i) {
                 flippedCards = [];
                 updateMemoryUI();
                 lockBoard = false;
-            }, 800); // 800ms waiting time so players can see the wrong pair & shake effect
+            }, 800);
         }
     }
 }
@@ -294,7 +315,7 @@ function processMemoryFlip(i) {
 function checkMemoryWin() {
     if(matchedCards.length === 16) {
         let winner = scoreHost === scoreGuest ? '🤝 දෙන්නම සමයි (Draw)!' : 
-            ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? '🎉 ඔයා දිනුම්!' : '😢 එයා දිනුම්!');
+            ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? `🎉 සුපිරි! ${myName} දිනුම්!` : `😢 අඩේ! ${partnerName} දිනුම්!`);
         let color = scoreHost === scoreGuest ? '#0077b6' : 
             ((scoreHost > scoreGuest && isHost) || (scoreGuest > scoreHost && !isHost) ? '#2b9348' : '#c1121f');
         
@@ -307,17 +328,18 @@ function checkMemoryWin() {
 }
 
 function updateMemoryUI() {
-    document.getElementById('mem-score-host').innerText = scoreHost;
-    document.getElementById('mem-score-guest').innerText = scoreGuest;
+    document.getElementById('score-me-mem').innerText = isHost ? scoreHost : scoreGuest;
+    document.getElementById('score-them-mem').innerText = isHost ? scoreGuest : scoreHost;
+    
     let amI = isHost ? 'host' : 'guest';
     let ind = document.getElementById('mem-turn-indicator');
     
     if(matchedCards.length < 16) {
         if(memoryTurn === amI) {
-            ind.innerText = "👉 දැන් ඔයාගේ වාරේ (ඔබන්න)";
+            ind.innerText = `👉 දැන් ${myName}ගේ වාරේ (ඔබන්න)`;
             ind.className = "turn-indicator my-turn";
         } else {
-            ind.innerText = "⏳ දැන් එයාගේ වාරේ...";
+            ind.innerText = `⏳ දැන් ${partnerName}ගේ වාරේ...`;
             ind.className = "turn-indicator their-turn";
         }
     }
@@ -359,8 +381,7 @@ window.selectBattleRole = function(who) {
         initBattleshipSetup();
     } else {
         showScreen('screen-battleship-wait');
-        document.getElementById('battle-wait-h3').innerText = "⏳ පොඩ්ඩක් ඉන්න...";
-        document.getElementById('battle-wait-p').innerText = "එයා බෝම්බ ටික හංගනකන් ඉන්න.";
+        document.getElementById('battle-wait-p').innerText = `${partnerName} බෝම්බ ටික හංගනකන් ඉන්න.`;
     }
 }
 
@@ -373,8 +394,7 @@ function setBattleRoleFromPartner(hider) {
         initBattleshipSetup();
     } else {
         showScreen('screen-battleship-wait');
-        document.getElementById('battle-wait-h3').innerText = "⏳ පොඩ්ඩක් ඉන්න...";
-        document.getElementById('battle-wait-p').innerText = "එයා බෝම්බ ටික හංගනකන් ඉන්න.";
+        document.getElementById('battle-wait-p').innerText = `${partnerName} බෝම්බ ටික හංගනකන් ඉන්න.`;
     }
 }
 
@@ -425,7 +445,7 @@ window.sendBattleshipReady = function() {
     sendData({type: 'battle-ready', data: battleState}); 
     battleData = battleState; 
     initBattleshipPlayGrid(); 
-    document.getElementById('battle-instructions').innerText = 'එයා හොයනකන් බලාගෙන ඉන්න...'; 
+    document.getElementById('battle-instructions').innerText = `${partnerName} හොයනකන් බලාගෙන ඉන්න...`; 
 }
 
 function initBattleshipPlayGrid() { 
@@ -497,26 +517,26 @@ function checkWinLoss() {
     if(playStats.hearts === 3) { 
         playStats.done = true; 
         if(battleSeeker === amI) {
-            inst.innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; 
-            resultTxt.innerText = '🎉 සුපිරි! ඔයා දිනුම්!'; 
+            inst.innerText = `🎉 සුපිරි! ${myName} දිනුම්!`; 
+            resultTxt.innerText = `🎉 සුපිරි! ${myName} දිනුම්!`; 
             resultTxt.style.color = '#2b9348';
-            window.showToast('ඔයා දිනුම්! ❤️'); 
+            window.showToast(`${myName} දිනුම්! ❤️`); 
         } else {
-            inst.innerText = 'අයියෝ! එයා දිනුම්.'; 
-            resultTxt.innerText = 'අයියෝ! එයා දිනුම්.'; 
+            inst.innerText = `අයියෝ! ${partnerName} දිනුම්.`; 
+            resultTxt.innerText = `අයියෝ! ${partnerName} දිනුම්.`; 
             resultTxt.style.color = '#c1121f';
         }
         showRemaining();
     } else if(playStats.bombs === 3) { 
         playStats.done = true; 
         if(battleSeeker === amI) {
-            inst.innerText = '😢 බෝම්බ පෑගුනා! ඔයා පැරදුනා.'; 
-            resultTxt.innerText = '😢 බෝම්බ පෑගුනා! ඔයා පැරදුනා.'; 
+            inst.innerText = `😢 බෝම්බ පෑගුනා! ${myName} පැරදුනා.`; 
+            resultTxt.innerText = `😢 බෝම්බ පෑගුනා! ${myName} පැරදුනා.`; 
             resultTxt.style.color = '#c1121f';
             window.showToast('Game Over! 💔'); 
         } else {
-            inst.innerText = '🎉 නියමයි! එයා බෝම්බ වලට අහු වුණා.'; 
-            resultTxt.innerText = '🎉 නියමයි! එයා බෝම්බ වලට අහු වුණා.'; 
+            inst.innerText = `🎉 නියමයි! ${partnerName} බෝම්බ වලට අහු වුණා.`; 
+            resultTxt.innerText = `🎉 නියමයි! ${partnerName} බෝම්බ වලට අහු වුණා.`; 
             resultTxt.style.color = '#2b9348';
         }
         showRemaining();
@@ -547,7 +567,7 @@ let availableQuestions = [];
 let currentQIndex = 0, myQuizAns = null, partnerQuizAns = null;
 
 window.startQuiz = function() { 
-    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට (Host) කියන්න Quiz එක ඔබන්න කියලා!"); 
+    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට කියන්න Quiz එක ඔබන්න කියලා!"); 
     if (availableQuestions.length === 0) {
         availableQuestions = quizQuestions.map((_, index) => index);
         window.showToast("අලුත් වටයක් පටන් ගත්තා! 🔄");
@@ -588,7 +608,7 @@ function checkQuizResults() {
         if(myQuizAns === partnerQuizAns) { 
             resTitle.innerText = "🎉 දෙන්නම එකඟයි!"; 
             resTitle.style.color = "#2b9348"; 
-            let who = (isHost && myQuizAns === 'guest') || (!isHost && myQuizAns === 'host') ? "එයා" : "ඔයා"; 
+            let who = (isHost && myQuizAns === 'guest') || (!isHost && myQuizAns === 'host') ? partnerName : myName; 
             resDetail.innerText = `දෙන්නම පිළිගත්තා වැඩියෙන්ම ඒ දේ කරන්නේ '${who}' කියලා! 😂❤️`; 
         } else { 
             resTitle.innerText = "⚔️ දෙන්නට දෙකක්!"; 
@@ -626,7 +646,7 @@ window.openGuessGuestWaiting = function() {
     document.getElementById('guess-play').classList.add('hidden');
     document.getElementById('guess-result-box').classList.add('hidden');
     let pickDiv = document.getElementById('guess-pick-secret');
-    pickDiv.innerHTML = '<div class="result-box"><h3>⏳ පොඩ්ඩක් ඉන්න...</h3><p>Host උපරිම ඉලක්කම තෝරනකන් ඉන්න.</p></div>';
+    pickDiv.innerHTML = `<div class="result-box"><h3>⏳ පොඩ්ඩක් ඉන්න...</h3><p>${partnerName} උපරිම ඉලක්කම තෝරනකන් ඉන්න.</p></div>`;
     pickDiv.classList.remove('hidden');
 }
 
@@ -657,14 +677,13 @@ function initPickSecret(max, turn) {
         <p>1 ත් ${max} ත් අතර ඔයාගේ රහස් ඉලක්කම හිතාගෙන මෙතන ගහන්න! 🤫</p>
         <input type="number" id="secret-input" placeholder="රහස් ඉලක්කම..." style="padding: 12px; border-radius: 15px; border: 2px solid #ffb3c6; text-align: center; font-size: 16px; width: 85%; margin-bottom: 15px; outline: none; background: #fff0f3;">
         <button onclick="submitSecret()">ලෑස්තියි</button>
-        <p id="secret-wait-text" class="hidden" style="color: #2b9348; margin-top: 15px; font-weight: bold;">⏳ Partner ඉලක්කම හිතනකන් ඉන්න...</p>
+        <p id="secret-wait-text" class="hidden" style="color: #2b9348; margin-top: 15px; font-weight: bold;">⏳ ${partnerName} ඉලක්කම හිතනකන් ඉන්න...</p>
     `;
 }
 
 window.submitSecret = function() {
     let val = parseInt(document.getElementById('secret-input').value);
     if(isNaN(val) || val < 1 || val > guessMax) {
-        // Shake Error on Setup Number
         document.getElementById('secret-input').classList.add('shake-error');
         setTimeout(() => document.getElementById('secret-input').classList.remove('shake-error'), 300);
         return window.showToast(`කරුණාකර 1ත් ${guessMax}ත් අතර ඉලක්කමක් දෙන්න!`);
@@ -688,7 +707,7 @@ function startGuessingPhase() {
     document.getElementById('guess-pick-secret').classList.add('hidden');
     document.getElementById('guess-play').classList.remove('hidden');
     
-    document.getElementById('guess-instruction').innerText = `දැන් එයා හිතපු ඉලක්කම හොයමු! (උපරිමය ${guessMax})`;
+    document.getElementById('guess-instruction').innerText = `දැන් ${partnerName} හිතපු ඉලක්කම හොයමු! (උපරිමය ${guessMax})`;
     document.getElementById('guess-hint-text').innerHTML = "ඔයාගේ Guess එක ගහන්න 👇";
     document.getElementById('guess-hint-text').style.color = "#590d22";
     document.getElementById('partner-hint-text').innerHTML = ""; 
@@ -699,7 +718,7 @@ function startGuessingPhase() {
 
 window.submitGuess = function() {
     let amI = isHost ? 'host' : 'guest';
-    if(guessTurn !== amI || isGuessGameOver) return window.showToast("දැන් එයාගේ වාරේ! පොඩ්ඩක් ඉන්න.");
+    if(guessTurn !== amI || isGuessGameOver) return window.showToast(`දැන් ${partnerName}ගේ වාරේ! පොඩ්ඩක් ඉන්න.`);
     
     let myGuess = parseInt(document.getElementById('guess-input').value);
     if(isNaN(myGuess) || myGuess < 1 || myGuess > guessMax) {
@@ -719,10 +738,10 @@ window.submitGuess = function() {
         
         let hintText = document.getElementById('guess-hint-text');
         if(myGuess < partnerSecret) {
-            hintText.innerHTML = `⬆️ මදි! එයා හිතපු ඉලක්කම <b>${myGuess}</b> ට වඩා වැඩියි!`;
+            hintText.innerHTML = `⬆️ මදි! ${partnerName} හිතපු ඉලක්කම <b>${myGuess}</b> ට වඩා වැඩියි!`;
             hintText.style.color = "#0077b6";
         } else {
-            hintText.innerHTML = `⬇️ වැඩියි! එයා හිතපු ඉලක්කම <b>${myGuess}</b> ට වඩා අඩුයි!`;
+            hintText.innerHTML = `⬇️ වැඩියි! ${partnerName} හිතපු ඉලක්කම <b>${myGuess}</b> ට වඩා අඩුයි!`;
             hintText.style.color = "#c1121f";
         }
         
@@ -736,9 +755,9 @@ function processPartnerGuess(guess) {
     let hintText = document.getElementById('partner-hint-text');
     
     if(guess < mySecret) {
-        hintText.innerHTML = `💡 එයා <b>${guess}</b> ගැහුවා. ඒක ඔයාගේ ඉලක්කමට වඩා අඩුයි!`;
+        hintText.innerHTML = `💡 ${partnerName} <b>${guess}</b> ගැහුවා. ඒක ඔයාගේ ඉලක්කමට වඩා අඩුයි!`;
     } else {
-        hintText.innerHTML = `💡 එයා <b>${guess}</b> ගැහුවා. ඒක ඔයාගේ ඉලක්කමට වඩා වැඩියි!`;
+        hintText.innerHTML = `💡 ${partnerName} <b>${guess}</b> ගැහුවා. ඒක ඔයාගේ ඉලක්කමට වඩා වැඩියි!`;
     }
     
     guessTurn = guessTurn === 'host' ? 'guest' : 'host';
@@ -754,16 +773,16 @@ function handleWin(winner) {
     document.getElementById('partner-hint-text').innerHTML = "";
     
     if(amIWinner) {
-        resultTxt.innerText = `🎉 සුපිරි! ඔයා දිනුම්! එයා හිතපු ඉලක්කම: ${partnerSecret}`;
+        resultTxt.innerText = `🎉 සුපිරි! ${myName} දිනුම්! ${partnerName} හිතපු ඉලක්කම: ${partnerSecret}`;
         resultTxt.style.color = "#2b9348";
         sendData({type: 'guess-win'}); 
     } else {
-        resultTxt.innerText = `😢 අඩේ! එයා දිනුම්! එයා හිතලා තිබ්බේ: ${partnerSecret}`;
+        resultTxt.innerText = `😢 අඩේ! ${partnerName} දිනුම්! ${partnerName} හිතලා තිබ්බේ: ${partnerSecret}`;
         resultTxt.style.color = "#c1121f";
     }
     
     document.getElementById('guess-result-box').classList.remove('hidden');
-    document.getElementById('guess-turn-indicator').innerText = amIWinner ? `🏆 ඔයා දිනුම්!` : `🏆 එයා දිනුම්!`;
+    document.getElementById('guess-turn-indicator').innerText = amIWinner ? `🏆 ${myName} දිනුම්!` : `🏆 ${partnerName} දිනුම්!`;
     document.getElementById('guess-turn-indicator').className = "turn-indicator my-turn";
     document.getElementById('btn-submit-guess').disabled = true;
 }
@@ -774,11 +793,11 @@ function updateGuessUI() {
     let ind = document.getElementById('guess-turn-indicator');
     
     if(guessTurn === amI) {
-        ind.innerText = "👉 දැන් ඔයාගේ වාරේ (ගෙස් කරන්න)";
+        ind.innerText = `👉 දැන් ${myName}ගේ වාරේ (ගෙස් කරන්න)`;
         ind.className = "turn-indicator my-turn";
         document.getElementById('btn-submit-guess').disabled = false;
     } else {
-        ind.innerText = "⏳ දැන් එයාගේ වාරේ...";
+        ind.innerText = `⏳ දැන් ${partnerName}ගේ වාරේ...`;
         ind.className = "turn-indicator their-turn";
         document.getElementById('btn-submit-guess').disabled = true;
     }
@@ -827,7 +846,7 @@ function initTicTacToe(turn) {
 function handleTttClick(i) {
     if(tttGameOver || tttBoard[i] !== null) return;
     let amI = isHost ? 'host' : 'guest';
-    if(tttTurn !== amI) return window.showToast("දැන් එයාගේ වාරේ!");
+    if(tttTurn !== amI) return window.showToast(`දැන් ${partnerName}ගේ වාරේ!`);
     
     sendData({type: 'ttt-move', index: i});
     processTttMove(i);
@@ -866,8 +885,8 @@ function checkTttWin(player) {
 
 function handleTttEnd(result, winner) {
     let text = "";
-    if(result === 'win') text = "🎉 සුපිරි! ඔයා දිනුම්!";
-    else if(result === 'lose') text = "😢 අඩේ! එයා දිනුම්!";
+    if(result === 'win') text = `🎉 සුපිරි! ${myName} දිනුම්!`;
+    else if(result === 'lose') text = `😢 අඩේ! ${partnerName} දිනුම්!`;
     else text = "🤝 තරඟය සමයි! (Draw)";
     
     document.getElementById('ttt-result-text').innerText = text;
@@ -883,10 +902,10 @@ function updateTttUI() {
     let ind = document.getElementById('ttt-turn-indicator');
     
     if(tttTurn === amI) {
-        ind.innerText = `👉 දැන් ඔයාගේ වාරේ (${isHost ? '❌' : '❤️'})`;
+        ind.innerText = `👉 දැන් ${myName}ගේ වාරේ (${isHost ? '❌' : '❤️'})`;
         ind.className = "turn-indicator my-turn";
     } else {
-        ind.innerText = `⏳ දැන් එයාගේ වාරේ (${!isHost ? '❌' : '❤️'})...`;
+        ind.innerText = `⏳ දැන් ${partnerName}ගේ වාරේ (${!isHost ? '❌' : '❤️'})...`;
         ind.className = "turn-indicator their-turn";
     }
 }
@@ -895,7 +914,7 @@ function updateTttUI() {
 let huntBoard = [], huntTarget = null, huntScoreH = 0, huntScoreG = 0;
 
 window.startNumberHunt = function() {
-    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට (Host) කියන්න පටන්ගන්න කියලා!");
+    if(!isHost) return window.showToast("Game එක හැදුව කෙනාට කියන්න පටන්ගන්න කියලා!");
     generateHuntRound(0, 0);
 }
 
@@ -918,8 +937,8 @@ function initHuntBoard(board, target, scoreH, scoreG) {
     document.getElementById('btn-hunt-yes').disabled = false;
     document.getElementById('hunt-wait-text').classList.add('hidden');
     
-    document.getElementById('hunt-score-host').innerText = scoreH;
-    document.getElementById('hunt-score-guest').innerText = scoreG;
+    document.getElementById('score-me-hunt').innerText = isHost ? scoreH : scoreG;
+    document.getElementById('score-them-hunt').innerText = isHost ? scoreG : scoreH;
     document.getElementById('hunt-target-box').innerText = target;
     
     if (scoreH >= 5 || scoreG >= 5) {
@@ -969,10 +988,10 @@ function endHuntGame() {
     let amI = isHost ? 'host' : 'guest';
     
     if ((huntScoreH >= 5 && amI === 'host') || (huntScoreG >= 5 && amI === 'guest')) {
-        winner.innerText = "🎉 සුපිරි! ඔයා දිනුම්!";
+        winner.innerText = `🎉 සුපිරි! ${myName} දිනුම්!`;
         winner.style.color = "#2b9348";
     } else {
-        winner.innerText = "😢 අඩේ! එයා දිනුම්!";
+        winner.innerText = `😢 අඩේ! ${partnerName} දිනුම්!`;
         winner.style.color = "#c1121f";
     }
     document.getElementById('hunt-result-box').classList.remove('hidden');
