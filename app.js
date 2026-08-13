@@ -653,157 +653,45 @@ function updateTttUI() {
     }
 }
 
-// --- 7. Voice Call (WebRTC: Fixed for Audio & NAT) ---
-let localStream = null, pc = null, inCall = false;
-let iceQueue = [];
+// --- 7. Voice Call (Jitsi Meet API - 100% Working) ---
+let jitsiApi = null;
 
-// අලුත් STUN / TURN Servers (Connection ඩ්‍රොප් නොවී සද්දෙ යන්න)
-const pcConfig = { 
-    iceServers: [
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject'
-        },
-        {
-            urls: 'turn:openrelay.metered.ca:443',
-            username: 'openrelayproject',
-            credential: 'openrelayproject'
-        },
-        {
-            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-            username: 'openrelayproject',
-            credential: 'openrelayproject'
-        }
-    ] 
-};
-
-window.toggleCall = async function() {
-    if (inCall) {
-        window.endCall();
-        sendData({type: 'end-call'});
+window.toggleCall = function() {
+    if (jitsiApi) {
+        // කෝල් එක කට් කිරීම
+        jitsiApi.dispose();
+        jitsiApi = null;
+        document.getElementById('btn-call').innerHTML = '<i class="fas fa-phone"></i>';
+        document.getElementById('btn-call').style.background = '#ff4d6d';
+        window.showToast("📞 ඇමතුම විසන්ධි වුණා.");
     } else {
-        initCall();
-    }
-};
-
-async function initCall() {
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // කෝල් එක ගැනීම
         document.getElementById('btn-call').innerHTML = '<i class="fas fa-phone-slash"></i>';
         document.getElementById('btn-call').style.background = '#dc3545';
-        inCall = true;
-        window.showToast("📞 ඇමතුම සම්බන්ධ වෙමින් පවතී...");
+        window.showToast("📞 කෝල් එකට සම්බන්ධ වෙමින් පවතී...");
 
-        pc = new RTCPeerConnection(pcConfig);
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-        // අලුත් Audio Play Logic එක (Autoplay Block වුණොත් විසඳන්න)
-        pc.ontrack = (event) => { 
-            let audio = document.getElementById('remote-audio');
-            if (audio.srcObject !== event.streams[0]) {
-                audio.srcObject = event.streams[0];
-                audio.muted = false;
-                audio.volume = 1.0;
-                let playPromise = audio.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        window.showToast("🔊 කෝල් එක ඇහෙන්න ස්ක්‍රීන් එක ටච් කරන්න!");
-                        document.body.addEventListener('click', () => audio.play(), {once: true});
-                    });
-                }
+        const domain = 'meet.jit.si';
+        const options = {
+            roomName: 'CoupleGameRoom_' + gameId, // මේ ගේම් අංකෙට විතරක් වෙනම රූම් එකක් හැදෙනවා
+            width: 0,
+            height: 0,
+            parentNode: document.querySelector('body'),
+            configOverwrite: { 
+                startWithVideoMuted: true, // Video ඕනෙ නෑ
+                startWithAudioMuted: false,
+                prejoinPageEnabled: false // කෙලින්ම කෝල් එකට යනවා
+            },
+            interfaceConfigOverwrite: {
+                SHOW_JITSI_WATERMARK: false
             }
-        };
-
-        pc.onicecandidate = (event) => {
-            if (event.candidate) sendData({ type: 'ice-candidate', candidate: JSON.parse(JSON.stringify(event.candidate)) });
         };
         
-        pc.onconnectionstatechange = () => {
-            if(pc.connectionState === 'connected') window.showToast("📞 ඇමතුම සාර්ථකයි!");
-            if(pc.connectionState === 'failed' || pc.connectionState === 'disconnected') window.endCall();
-        };
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        sendData({ type: 'call-offer', offer: { type: offer.type, sdp: offer.sdp } });
-    } catch (e) {
-        window.showToast("⚠️ මයික් එක On කරන්න අවසර දෙන්න!");
-        window.endCall();
-    }
-}
-
-window.handleCallOffer = async function(offerData) {
-    if(inCall) return; // දැනටමත් කෝල් එකක නම් අලුත් කෝල් ගන්නේ නෑ
-    try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        inCall = true;
-        document.getElementById('btn-call').innerHTML = '<i class="fas fa-phone-slash"></i>';
-        document.getElementById('btn-call').style.background = '#dc3545';
-        window.showToast("📞 කෝල් එකට සම්බන්ධ වුණා!");
-    } catch(e) { return window.showToast("⚠️ මයික් අවසරය නැහැ!"); }
-    
-    pc = new RTCPeerConnection(pcConfig);
-    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-    
-    // Audio Play Logic
-    pc.ontrack = (e) => { 
-        let audio = document.getElementById('remote-audio');
-        if (audio.srcObject !== e.streams[0]) {
-            audio.srcObject = e.streams[0];
-            audio.muted = false;
-            audio.volume = 1.0;
-            let playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(err => {
-                    window.showToast("🔊 කෝල් එක ඇහෙන්න ස්ක්‍රීන් එක ටච් කරන්න!");
-                    document.body.addEventListener('click', () => audio.play(), {once: true});
-                });
+        jitsiApi = new JitsiMeetExternalAPI(domain, options);
+        
+        jitsiApi.addEventListeners({
+            videoConferenceJoined: function() {
+                window.showToast("📞 ඇමතුම සාර්ථකයි! කතා කරන්න.");
             }
-        }
-    };
-
-    pc.onicecandidate = (e) => {
-        if (e.candidate) sendData({ type: 'ice-candidate', candidate: JSON.parse(JSON.stringify(e.candidate)) });
-    };
-    
-    pc.onconnectionstatechange = () => {
-        if(pc.connectionState === 'connected') window.showToast("📞 ඇමතුම සාර්ථකයි!");
-        if(pc.connectionState === 'failed' || pc.connectionState === 'disconnected') window.endCall();
-    };
-    
-    await pc.setRemoteDescription(new RTCSessionDescription(offerData));
-    window.flushIceQueue();
-    
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    sendData({ type: 'call-answer', answer: { type: answer.type, sdp: answer.sdp } });
-}
-
-window.handleIceCandidate = function(candidateData) {
-    if(pc && pc.remoteDescription && pc.remoteDescription.type) {
-        pc.addIceCandidate(new RTCIceCandidate(candidateData)).catch(e => console.error(e));
-    } else {
-        iceQueue.push(candidateData);
+        });
     }
-}
-
-window.flushIceQueue = function() {
-    iceQueue.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.error(e)));
-    iceQueue = [];
-}
-
-window.endCall = function() {
-    inCall = false;
-    if(pc) { pc.close(); pc = null; }
-    if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-    document.getElementById('btn-call').innerHTML = '<i class="fas fa-phone"></i>';
-    document.getElementById('btn-call').style.background = 'var(--primary)';
-    document.getElementById('remote-audio').srcObject = null;
-    iceQueue = [];
-    window.showToast("📞 ඇමතුම විසන්ධි වුණා.");
-}
+};
