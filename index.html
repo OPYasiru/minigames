@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Couple Mini Games ❤️</title>
-
-    <script src="https://meet.jit.si/external_api.js"></script>
     
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- Jitsi Meet API (කෝල් එක සඳහා) -->
+    <script src="https://meet.jit.si/external_api.js"></script>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;600;700&display=swap" rel="stylesheet">
@@ -177,9 +178,10 @@
         </div>
     </div>
 
-    <!-- Voice Call UI (Bug Fixed for Mobile/Safari Autoplay) -->
-    <audio id="remote-audio" autoplay playsinline style="display:none;"></audio>
-    <button id="btn-call" class="hidden" onclick="toggleCall()" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000; padding: 0; transition: 0.3s; background: #ff4d6d; color: white; border: none; cursor: pointer;"><i class="fas fa-phone"></i></button>
+    <!-- Floating Jitsi Call Box (මයික් අවසරය ගන්න පුළුවන් වෙන්න) -->
+    <div id="jitsi-container" class="hidden" style="position: fixed; top: 20px; right: 20px; width: 120px; height: 160px; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 2000; border: 2px solid #ff4d6d; background: #333;"></div>
+    
+    <button id="btn-call" class="hidden" onclick="toggleCall()" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 2001; padding: 0; transition: 0.3s; background: #ff4d6d; color: white; border: none; cursor: pointer;"><i class="fas fa-phone"></i></button>
 
     <!-- JavaScript එක ලින්ක් කිරීම -->
     <script type="module" src="app.js"></script>
