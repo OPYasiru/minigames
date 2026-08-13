@@ -45,7 +45,7 @@
         <h1>🎮 Game Lobby</h1>
         <div id="lobby-content">
             <p>පාට්නර් කනෙක්ට් වුණා! ගේම් එකක් තෝරන්න.</p>
-            <button onclick="startTicTacToe()">❌❤️ Tic-Tac-Toe </button>
+            <button onclick="startTicTacToe()">❌❤️ ටික් ටැක් ටෝ (Tic-Tac-Toe)</button>
             <button onclick="startMemoryMatch()">🃏 මතක ගැලපීම (Memory Match)</button>
             <button onclick="startQuiz()">🤔 කවුද වැඩියෙන්ම? (Quiz)</button>
             <button onclick="startBattleship()">❤️‍🔥 හදවත් යුද්ධය (Battleship)</button>
@@ -56,12 +56,11 @@
 
     <!-- Tic Tac Toe -->
     <div id="screen-tictactoe" class="card hidden">
-        <h2>❌❤️ Tic-Tac-Toe</h2>
+        <h2>❌❤️ ටික් ටැක් ටෝ</h2>
         <div id="ttt-turn-indicator" class="turn-indicator"></div>
         
         <div class="ttt-grid" id="ttt-grid"></div>
         
-        <!-- Result and Play Again Box -->
         <div id="ttt-result-box" class="result-box hidden">
             <h3 id="ttt-result-text"></h3>
             <p style="margin-bottom: 15px; color: #590d22; font-weight: bold;">ආයෙත් සෙල්ලම් කරනවද?</p>
@@ -148,7 +147,6 @@
     <div id="screen-guess" class="card hidden">
         <h2>🔢 ඉලක්කම හොයමු</h2>
         
-        <!-- 1. Host Setup -->
         <div id="guess-setup" class="hidden">
             <p>ගේම් එකට අදාළ උපරිම ඉලක්කම තෝරන්න</p>
             <select id="guess-max-limit" style="padding: 12px; width: 85%; margin-bottom: 20px; border-radius: 15px; border: 2px solid #ffb3c6; text-align: center; font-size: 16px; font-weight: bold; color: #590d22; outline: none;">
@@ -160,10 +158,8 @@
             <button onclick="startGameGuess()">ගේම් එක පටන්ගන්න</button>
         </div>
         
-        <!-- 2. Pick Secret Number -->
         <div id="guess-pick-secret" class="hidden"></div>
         
-        <!-- 3. Gameplay -->
         <div id="guess-play" class="hidden">
             <p id="guess-instruction" style="font-weight: bold; font-size: 17px; color: #ff4d6d;">දැන් එයා හිතපු ඉලක්කම හොයමු!</p>
             <div id="guess-turn-indicator" class="turn-indicator"></div>
@@ -181,6 +177,10 @@
             <button class="secondary hidden" id="btn-guess-home" onclick="goLobby()" style="margin-top: 25px;"><i class="fas fa-home"></i> Home</button>
         </div>
     </div>
+
+    <!-- Voice Call UI -->
+    <audio id="remote-audio" autoplay></audio>
+    <button id="btn-call" class="hidden" onclick="toggleCall()" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000; padding: 0; transition: 0.3s; background: #ff4d6d; color: white; border: none; cursor: pointer;"><i class="fas fa-phone"></i></button>
 
     <!-- JavaScript එක ලින්ක් කිරීම -->
     <script type="module" src="app.js"></script>
