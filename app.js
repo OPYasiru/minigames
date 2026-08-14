@@ -5,7 +5,7 @@ import { getDatabase, ref, set, onValue, push, onChildAdded, onDisconnect, get }
 // 1 = කැඩුණු වීදුරුව (Shattered Screen)
 // 2 = හැකර් / ග්ලිච් (TV Glitch)
 // 3 = අකුණු ගැසීම සහ වැස්ස (Thunder & Lightning)
-const LOSE_EFFECT_TYPE = 2;
+const LOSE_EFFECT_TYPE = 1;
 
 
 // --- 🌟 Magic Link Custom Names Logic ---
