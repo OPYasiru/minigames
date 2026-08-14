@@ -45,18 +45,17 @@ input:focus { border-color: var(--primary); }
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* 2. TV Glitch Effect (හැකර් ග්ලිච්) */
-.glitch-effect { animation: glitchAnim 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; filter: grayscale(0.8) contrast(150%) hue-rotate(90deg) !important; }
-@keyframes glitchAnim {
-    0% { transform: translate(0) }
-    20% { transform: translate(-5px, 5px) }
-    40% { transform: translate(-5px, -5px) }
-    60% { transform: translate(5px, 5px) }
-    80% { transform: translate(5px, -5px) }
-    100% { transform: translate(0) }
+/* 2. Black Screen Effect (ගැස්සෙන්නේ නැති අඳුරු ඉෆෙක්ට් එක) */
+.glitch-effect { 
+    filter: brightness(0.2) grayscale(1) !important; 
+    transition: filter 0.2s ease-in-out; 
 }
-.glitch-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,255,255,0.2); mix-blend-mode: screen; z-index: 9998; pointer-events: none; animation: glitchSplit 0.1s infinite; }
-@keyframes glitchSplit { 0% { opacity: 0.2; transform: translateY(-2px); } 100% { opacity: 0.6; transform: translateY(2px); background: rgba(255,0,0,0.2); } }
+.glitch-overlay { 
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+    background: rgba(0, 0, 0, 0.7); 
+    z-index: 9998; pointer-events: none; 
+    transition: background 0.2s ease-in-out;
+}
 
 /* 3. Thunder & Lightning Effect (අකුණු ගැසීම) */
 .thunder-effect { animation: thunderFlash 3s forwards; }
