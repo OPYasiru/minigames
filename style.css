@@ -1,6 +1,9 @@
 :root { --primary: #ff4d6d; --bg: #ffe6ea; --text: #590d22; }
 * { box-sizing: border-box; }
-body { font-family: 'Noto Sans Sinhala', sans-serif; background: linear-gradient(135deg, var(--bg), #ffccd5); margin: 0; padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; color: var(--text); overflow-x: hidden; }
+body { font-family: 'Noto Sans Sinhala', sans-serif; background: linear-gradient(135deg, var(--bg), #ffccd5); margin: 0; padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; color: var(--text); overflow-x: hidden; transition: filter 1s ease-in-out; }
+
+.sad-grayscale { filter: grayscale(90%) contrast(120%) !important; }
+
 .card { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(255, 77, 109, 0.15); width: 100%; max-width: 420px; text-align: center; margin-top: 20px; z-index: 10; }
 h1, h2, h3 { color: var(--primary); margin-bottom: 10px; }
 p { font-size: 15px; color: #800f2f; margin-bottom: 15px; }
@@ -27,18 +30,16 @@ input:focus { border-color: var(--primary); }
     border-color: #c1121f !important;
 }
 
-/* 🎇 Blast Particles Animation 🎇 */
-.blast-particle { 
-    position: fixed; 
-    top: 50vh; 
-    left: 50vw; 
-    pointer-events: none; 
-    animation: blast ease-out forwards; 
+/* 🌧️ Sad Rain Particles */
+@keyframes rainFall {
+    0% { transform: translateY(-10vh) scale(1); opacity: 1; }
+    100% { transform: translateY(110vh) scale(0.6); opacity: 0; }
 }
-@keyframes blast {
-    0% { transform: translate(0, 0) scale(0) rotate(0deg); opacity: 1; }
-    15% { opacity: 1; }
-    100% { transform: translate(var(--tx), var(--ty)) scale(1.2) rotate(var(--rot)); opacity: 0; }
+.rain-particle { 
+    position: fixed; 
+    top: -50px; 
+    pointer-events: none; 
+    animation: rainFall linear forwards; 
 }
 
 /* Grid Defaults */
