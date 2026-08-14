@@ -19,60 +19,60 @@ if (userParam === 'rash') {
 document.querySelectorAll('.my-name-label').forEach(el => el.innerText = myName);
 document.querySelectorAll('.partner-name-label').forEach(el => el.innerText = partnerName);
 
-// --- 🌟 Win / Lose Blast Screen Effects Engine ---
+// --- 🌟 PREMIUM WIN/LOSE EFFECTS ---
 window.triggerWin = function() {
     const overlay = document.getElementById('flash-overlay');
-    overlay.style.backgroundColor = '#d4edda'; // Light green flash
-    overlay.style.opacity = '0.7';
+    overlay.style.backgroundColor = 'rgba(43, 147, 72, 0.4)'; // Pleasant green pulse
+    overlay.style.opacity = '1';
     setTimeout(() => overlay.style.opacity = '0', 600);
-    createBlastParticles('confetti', 100);
+    
+    // Realistic Confetti Blast from both sides
+    var duration = 3 * 1000;
+    var end = Date.now() + duration;
+    (function frame() {
+        confetti({
+            particleCount: 5, angle: 60, spread: 55, origin: { x: 0 },
+            colors: ['#ff4d6d', '#2b9348', '#0077b6', '#fca311', '#9d4edd']
+        });
+        confetti({
+            particleCount: 5, angle: 120, spread: 55, origin: { x: 1 },
+            colors: ['#ff4d6d', '#2b9348', '#0077b6', '#fca311', '#9d4edd']
+        });
+        if (Date.now() < end) { requestAnimationFrame(frame); }
+    }());
 }
 
 window.triggerLose = function() {
     const overlay = document.getElementById('flash-overlay');
-    overlay.style.backgroundColor = '#f8d7da'; // Light red flash
-    overlay.style.opacity = '0.7';
-    setTimeout(() => overlay.style.opacity = '0', 600);
-    createBlastParticles('sad', 60);
+    overlay.style.backgroundColor = 'rgba(193, 18, 31, 0.5)'; // Sad red pulse
+    overlay.style.opacity = '1';
+    
+    // Grayscale mode for sadness
+    document.body.classList.add('sad-grayscale');
+    
+    setTimeout(() => {
+        overlay.style.opacity = '0';
+        document.body.classList.remove('sad-grayscale');
+    }, 3000); // Back to normal after 3 seconds
+    
+    // Raining Hearts and Tears
+    createRainParticles(50);
 }
 
-function createBlastParticles(type, count) {
+function createRainParticles(count) {
     const container = document.getElementById('effect-container');
     container.innerHTML = '';
-    const colors = ['#ff4d6d', '#2b9348', '#0077b6', '#fca311', '#9d4edd', '#00f5d4', '#fee440'];
     
     for(let i=0; i<count; i++) {
         let p = document.createElement('div');
-        p.className = 'blast-particle';
-        
-        // Random direction and velocity for the blast
-        let angle = Math.random() * Math.PI * 2;
-        let velocity = 20 + Math.random() * 60; // Distance it travels (20vmin to 80vmin)
-        let tx = Math.cos(angle) * velocity + 'vmin';
-        let ty = Math.sin(angle) * velocity + 'vmin';
-        let rot = (Math.random() * 1080 - 540) + 'deg'; // Random spins
-        
-        p.style.setProperty('--tx', tx);
-        p.style.setProperty('--ty', ty);
-        p.style.setProperty('--rot', rot);
-        p.style.animationDuration = (0.8 + Math.random() * 0.7) + 's';
-        
-        if(type === 'confetti') {
-            p.style.width = (Math.random() * 10 + 8) + 'px';
-            p.style.height = (Math.random() * 15 + 10) + 'px';
-            p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-            p.style.borderRadius = (Math.random() > 0.5 ? '50%' : '2px');
-        } else {
-            p.innerText = Math.random() > 0.5 ? '💔' : '💧';
-            p.style.fontSize = (Math.random() * 20 + 20) + 'px';
-            p.style.display = 'flex';
-            p.style.justifyContent = 'center';
-            p.style.alignItems = 'center';
-        }
+        p.className = 'rain-particle';
+        p.style.left = Math.random() * 100 + 'vw';
+        p.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+        p.innerText = Math.random() > 0.5 ? '💔' : '💧';
+        p.style.fontSize = (Math.random() * 15 + 15) + 'px';
         container.appendChild(p);
     }
-    // Clean up particles after animation completes
-    setTimeout(() => container.innerHTML = '', 2000);
+    setTimeout(() => container.innerHTML = '', 4000);
 }
 
 // 🛑 FIREBASE CONFIG 🛑
