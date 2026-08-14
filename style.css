@@ -13,7 +13,7 @@ input:focus { border-color: var(--primary); }
 .id-box { background: white; border: 2px dashed var(--primary); padding: 10px; border-radius: 15px; font-size: 32px; font-weight: 700; color: var(--primary); letter-spacing: 5px; margin-bottom: 15px; font-family: monospace; }
 .hidden { display: none !important; }
 
-/* Effects (Shake, Confetti, Flash) */
+/* Shake Error Animation */
 @keyframes shake {
     0% { transform: translateX(0); }
     25% { transform: translateX(-6px); }
@@ -27,9 +27,18 @@ input:focus { border-color: var(--primary); }
     border-color: #c1121f !important;
 }
 
-.particle { position: fixed; top: -20px; animation: fall linear forwards; z-index: 9999; pointer-events: none; }
-@keyframes fall {
-    to { transform: translateY(110vh) rotate(720deg); }
+/* 🎇 Blast Particles Animation 🎇 */
+.blast-particle { 
+    position: fixed; 
+    top: 50vh; 
+    left: 50vw; 
+    pointer-events: none; 
+    animation: blast ease-out forwards; 
+}
+@keyframes blast {
+    0% { transform: translate(0, 0) scale(0) rotate(0deg); opacity: 1; }
+    15% { opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(1.2) rotate(var(--rot)); opacity: 0; }
 }
 
 /* Grid Defaults */
