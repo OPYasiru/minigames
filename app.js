@@ -1,6 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, push, onChildAdded, onDisconnect, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
+// 🛑 පරාද වුණාම එන Effect එක මෙතනින් මාරු කරන්න (1, 2, හෝ 3 දාන්න)
+// 1 = කැඩුණු වීදුරුව (Shattered Screen)
+// 2 = හැකර් / ග්ලිච් (TV Glitch)
+// 3 = අකුණු ගැසීම සහ වැස්ස (Thunder & Lightning)
+const LOSE_EFFECT_TYPE = 2;
+
+
 // --- 🌟 Magic Link Custom Names Logic ---
 const urlParams = new URLSearchParams(window.location.search);
 const userParam = urlParams.get('user');
@@ -22,7 +29,7 @@ document.querySelectorAll('.partner-name-label').forEach(el => el.innerText = pa
 // --- 🌟 PREMIUM WIN/LOSE EFFECTS ---
 window.triggerWin = function() {
     const overlay = document.getElementById('flash-overlay');
-    overlay.style.backgroundColor = 'rgba(43, 147, 72, 0.4)'; // Pleasant green pulse
+    overlay.style.backgroundColor = 'rgba(43, 147, 72, 0.4)'; // Light green pulse
     overlay.style.opacity = '1';
     setTimeout(() => overlay.style.opacity = '0', 600);
     
@@ -30,50 +37,53 @@ window.triggerWin = function() {
     var duration = 3 * 1000;
     var end = Date.now() + duration;
     (function frame() {
-        confetti({
-            particleCount: 5, angle: 60, spread: 55, origin: { x: 0 },
-            colors: ['#ff4d6d', '#2b9348', '#0077b6', '#fca311', '#9d4edd']
-        });
-        confetti({
-            particleCount: 5, angle: 120, spread: 55, origin: { x: 1 },
-            colors: ['#ff4d6d', '#2b9348', '#0077b6', '#fca311', '#9d4edd']
-        });
+        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ff4d6d', '#2b9348', '#0077b6', '#fca311', '#9d4edd'] });
+        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ff4d6d', '#2b9348', '#0077b6', '#fca311', '#9d4edd'] });
         if (Date.now() < end) { requestAnimationFrame(frame); }
     }());
 }
 
 window.triggerLose = function() {
-    const overlay = document.getElementById('flash-overlay');
-    overlay.style.backgroundColor = 'rgba(193, 18, 31, 0.5)'; // Sad red pulse
-    overlay.style.opacity = '1';
-    
-    // Grayscale mode for sadness
-    document.body.classList.add('sad-grayscale');
-    
-    setTimeout(() => {
-        overlay.style.opacity = '0';
-        document.body.classList.remove('sad-grayscale');
-    }, 3000); // Back to normal after 3 seconds
-    
-    // Raining Hearts and Tears
-    createRainParticles(50);
-}
-
-function createRainParticles(count) {
     const container = document.getElementById('effect-container');
     container.innerHTML = '';
     
-    for(let i=0; i<count; i++) {
-        let p = document.createElement('div');
-        p.className = 'rain-particle';
-        p.style.left = Math.random() * 100 + 'vw';
-        p.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
-        p.innerText = Math.random() > 0.5 ? '💔' : '💧';
-        p.style.fontSize = (Math.random() * 15 + 15) + 'px';
-        container.appendChild(p);
+    if(LOSE_EFFECT_TYPE === 1) {
+        // Effect 1: Shattered Glass
+        let crack = document.createElement('div');
+        crack.className = 'shatter-overlay';
+        document.body.appendChild(crack);
+        setTimeout(() => crack.remove(), 2500);
+
+    } else if(LOSE_EFFECT_TYPE === 2) {
+        // Effect 2: Glitch / Hacker
+        document.body.classList.add('glitch-effect');
+        let overlay = document.createElement('div');
+        overlay.className = 'glitch-overlay';
+        document.body.appendChild(overlay);
+        
+        setTimeout(() => {
+            document.body.classList.remove('glitch-effect');
+            overlay.remove();
+        }, 2000);
+
+    } else if(LOSE_EFFECT_TYPE === 3) {
+        // Effect 3: Thunder & Rain
+        document.body.classList.add('thunder-effect');
+        for(let i=0; i<60; i++) {
+            let rain = document.createElement('div');
+            rain.className = 'heavy-rain';
+            rain.style.left = Math.random() * 100 + 'vw';
+            rain.style.animationDuration = (Math.random() * 0.3 + 0.2) + 's';
+            rain.style.animationDelay = Math.random() + 's';
+            container.appendChild(rain);
+        }
+        setTimeout(() => {
+            document.body.classList.remove('thunder-effect');
+            container.innerHTML = '';
+        }, 3000);
     }
-    setTimeout(() => container.innerHTML = '', 4000);
 }
+
 
 // 🛑 FIREBASE CONFIG 🛑
 const firebaseConfig = {
