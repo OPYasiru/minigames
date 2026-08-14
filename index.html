@@ -17,6 +17,10 @@
 </head>
 <body>
 
+    <!-- Screen Effects (Win / Lose) -->
+    <div id="flash-overlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:9998; opacity:0; transition: opacity 0.5s;"></div>
+    <div id="effect-container" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; overflow: hidden;"></div>
+
     <div id="toast">Hello!</div>
 
     <!-- Connect Screen -->
@@ -249,6 +253,6 @@
     </div>
 
     <!-- JavaScript එක ලින්ක් කිරීම -->
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=new2"></script>
 </body>
 </html>
