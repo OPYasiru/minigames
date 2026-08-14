@@ -1,7 +1,7 @@
 :root { --primary: #ff4d6d; --bg: #ffe6ea; --text: #590d22; }
 * { box-sizing: border-box; }
 body { font-family: 'Noto Sans Sinhala', sans-serif; background: linear-gradient(135deg, var(--bg), #ffccd5); margin: 0; padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; color: var(--text); overflow-x: hidden; }
-.card { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(255, 77, 109, 0.15); width: 100%; max-width: 420px; text-align: center; margin-top: 20px; }
+.card { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(255, 77, 109, 0.15); width: 100%; max-width: 420px; text-align: center; margin-top: 20px; z-index: 10; }
 h1, h2, h3 { color: var(--primary); margin-bottom: 10px; }
 p { font-size: 15px; color: #800f2f; margin-bottom: 15px; }
 button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; margin: 8px; width: 85%; font-family: 'Noto Sans Sinhala', sans-serif; }
@@ -13,7 +13,7 @@ input:focus { border-color: var(--primary); }
 .id-box { background: white; border: 2px dashed var(--primary); padding: 10px; border-radius: 15px; font-size: 32px; font-weight: 700; color: var(--primary); letter-spacing: 5px; margin-bottom: 15px; font-family: monospace; }
 .hidden { display: none !important; }
 
-/* Shake Error Animation */
+/* Effects (Shake, Confetti, Flash) */
 @keyframes shake {
     0% { transform: translateX(0); }
     25% { transform: translateX(-6px); }
@@ -25,6 +25,11 @@ input:focus { border-color: var(--primary); }
     animation: shake 0.3s ease-in-out;
     background-color: #ff99a8 !important;
     border-color: #c1121f !important;
+}
+
+.particle { position: fixed; top: -20px; animation: fall linear forwards; z-index: 9999; pointer-events: none; }
+@keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); }
 }
 
 /* Grid Defaults */
@@ -74,5 +79,5 @@ canvas { width: 100%; height: 350px; touch-action: none; display: block; }
 .h-cell { aspect-ratio: 1; background: #ffb3c6; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; cursor: pointer; color: #590d22; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.1); }
 .h-cell:active { transform: translateY(3px); box-shadow: none; }
 
-#toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(89, 13, 34, 0.9); color: white; padding: 12px 25px; border-radius: 30px; z-index: 1000; transition: 0.4s; opacity: 0; pointer-events: none; font-weight: bold; text-align: center; width: max-content; max-width: 90%; }
+#toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(89, 13, 34, 0.9); color: white; padding: 12px 25px; border-radius: 30px; z-index: 10000; transition: 0.4s; opacity: 0; pointer-events: none; font-weight: bold; text-align: center; width: max-content; max-width: 90%; }
 #toast.show { opacity: 1; top: 40px; }
