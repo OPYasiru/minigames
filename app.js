@@ -64,7 +64,7 @@ window.triggerLose = function() {
         setTimeout(() => {
             document.body.classList.remove('glitch-effect');
             overlay.remove();
-        }, 2000);
+        }, 1000);
 
     } else if(LOSE_EFFECT_TYPE === 3) {
         // Effect 3: Thunder & Rain
