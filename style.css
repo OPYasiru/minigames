@@ -45,16 +45,19 @@ input:focus { border-color: var(--primary); }
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* 2. Black Screen Effect (ගැස්සෙන්නේ නැති අඳුරු ඉෆෙක්ට් එක) */
+/* 2. TV Glitch Effect (ගැස්සෙන්නේ නැති හැකර් ඉෆෙක්ට් එක) */
 .glitch-effect { 
-    filter: brightness(0.2) grayscale(1) !important; 
-    transition: filter 0.2s ease-in-out; 
+    filter: grayscale(0.8) contrast(150%) hue-rotate(90deg) !important; 
 }
 .glitch-overlay { 
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-    background: rgba(0, 0, 0, 0.7); 
+    background: rgba(0,255,255,0.2); mix-blend-mode: screen; 
     z-index: 9998; pointer-events: none; 
-    transition: background 0.2s ease-in-out;
+    animation: glitchColor 0.1s infinite; 
+}
+@keyframes glitchColor { 
+    0% { opacity: 0.2; background: rgba(0,255,255,0.2); } 
+    100% { opacity: 0.6; background: rgba(255,0,0,0.2); } 
 }
 
 /* 3. Thunder & Lightning Effect (අකුණු ගැසීම) */
