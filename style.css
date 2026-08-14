@@ -1,8 +1,6 @@
 :root { --primary: #ff4d6d; --bg: #ffe6ea; --text: #590d22; }
 * { box-sizing: border-box; }
-body { font-family: 'Noto Sans Sinhala', sans-serif; background: linear-gradient(135deg, var(--bg), #ffccd5); margin: 0; padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; color: var(--text); overflow-x: hidden; transition: filter 1s ease-in-out; }
-
-.sad-grayscale { filter: grayscale(90%) contrast(120%) !important; }
+body { font-family: 'Noto Sans Sinhala', sans-serif; background: linear-gradient(135deg, var(--bg), #ffccd5); margin: 0; padding: 10px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; color: var(--text); overflow-x: hidden; transition: filter 0.5s ease-in-out; }
 
 .card { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(255, 77, 109, 0.15); width: 100%; max-width: 420px; text-align: center; margin-top: 20px; z-index: 10; }
 h1, h2, h3 { color: var(--primary); margin-bottom: 10px; }
@@ -30,17 +28,45 @@ input:focus { border-color: var(--primary); }
     border-color: #c1121f !important;
 }
 
-/* 🌧️ Sad Rain Particles */
-@keyframes rainFall {
-    0% { transform: translateY(-10vh) scale(1); opacity: 1; }
-    100% { transform: translateY(110vh) scale(0.6); opacity: 0; }
+/* =========================================
+   LOSE EFFECTS CSS 
+   ========================================= */
+
+/* 1. Shatter Effect (කැඩුණු වීදුරු) */
+.shatter-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; pointer-events: none;
+    background-image: radial-gradient(circle at 50% 50%, transparent 0%, rgba(0,0,0,0.4) 100%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Cpath stroke='rgba(255,255,255,0.8)' stroke-width='2' fill='none' d='M250,250 L50,50 M250,250 L450,80 M250,250 L100,450 M250,250 L400,480 M250,250 L180,100 M250,250 L350,150 L480,200 M250,250 L150,350 L50,300 M250,250 L200,200 L100,150 M250,250 L300,300 L450,350'/%3E%3C/svg%3E");
+    background-size: cover; background-position: center;
+    animation: shatterAnim 0.3s ease-out forwards;
 }
-.rain-particle { 
-    position: fixed; 
-    top: -50px; 
-    pointer-events: none; 
-    animation: rainFall linear forwards; 
+@keyframes shatterAnim {
+    0% { transform: scale(1.5); opacity: 0; }
+    50% { transform: scale(0.98); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
 }
+
+/* 2. TV Glitch Effect (හැකර් ග්ලිච්) */
+.glitch-effect { animation: glitchAnim 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; filter: grayscale(0.8) contrast(150%) hue-rotate(90deg) !important; }
+@keyframes glitchAnim {
+    0% { transform: translate(0) }
+    20% { transform: translate(-5px, 5px) }
+    40% { transform: translate(-5px, -5px) }
+    60% { transform: translate(5px, 5px) }
+    80% { transform: translate(5px, -5px) }
+    100% { transform: translate(0) }
+}
+.glitch-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,255,255,0.2); mix-blend-mode: screen; z-index: 9998; pointer-events: none; animation: glitchSplit 0.1s infinite; }
+@keyframes glitchSplit { 0% { opacity: 0.2; transform: translateY(-2px); } 100% { opacity: 0.6; transform: translateY(2px); background: rgba(255,0,0,0.2); } }
+
+/* 3. Thunder & Lightning Effect (අකුණු ගැසීම) */
+.thunder-effect { animation: thunderFlash 3s forwards; }
+@keyframes thunderFlash {
+    0%, 5%, 10%, 100% { filter: brightness(1) grayscale(0); background-color: transparent; }
+    2%, 7% { filter: brightness(3) invert(1); background-color: white; }
+    15%, 90% { filter: grayscale(1) brightness(0.4); }
+}
+.heavy-rain { position: fixed; width: 2px; height: 40px; background: rgba(255,255,255,0.7); pointer-events: none; z-index: 9999; animation: rainFall 0.5s linear infinite; }
+@keyframes rainFall { 0% { transform: translateY(-100px); opacity: 0;} 20% { opacity: 1; } 100% { transform: translateY(110vh); opacity: 0; } }
 
 /* Grid Defaults */
 .turn-indicator { font-size: 16px; font-weight: bold; margin-bottom: 10px; padding: 10px; border-radius: 15px; transition: 0.3s; }
